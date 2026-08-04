@@ -1,0 +1,619 @@
+{
+  "name": "AI Messenger Auto Reply",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "messenger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5382b00a-ae2a-48b9-bf16-e7e40d360d57",
+      "name": "Messenger Events (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "webhookId": "dafed60a-2d49-4b26-857f-b4c63c14e8e6"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "EVENT_RECEIVED",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d93b3c90-bfdb-4047-98f3-62b0f85993b9",
+      "name": "Ack 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = ($input.first().json.body) || {};\nconst entry = (body.entry && body.entry[0]) || {};\nconst messaging = (entry.messaging && entry.messaging[0]) || {};\nconst msg = messaging.message || {};\nconst text = (msg.text || '').trim();\n// Ignore delivery/read/echo events and empty messages\nif (!text || msg.is_echo) { return []; }\nreturn [{ json: {\n  senderId: (messaging.sender && messaging.sender.id) || '',\n  pageId: entry.id || '',\n  messageText: text,\n  receivedAt: new Date().toISOString(),\n  startTs: Date.now(),\n} }];"
+      },
+      "id": "baeef23e-1fe3-4136-9cee-71d164c6a50d",
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o",
+          "cachedResultName": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a friendly, professional Facebook Page customer support representative.\nRules:\n- Always be friendly, professional, short and helpful.\n- Never argue. Never reveal that you are an AI. Never hallucinate or invent facts.\n- If you do not know the answer, set needs_human=true and set reply to: \"I'll connect you with a human.\"\n\nLANGUAGE: Detect the user's language and ALWAYS reply in that same language.\nSupported: English, Bangla, Hindi, Urdu, Arabic, Spanish, French, German, Chinese, Japanese, Russian, Portuguese, Italian, Turkish, Malay, Indonesian, Thai, Vietnamese.\n\nBANGLA: If the user writes in Bangla or Banglish (romanized Bangla like \"kemon aso\", \"price koto\", \"order korte chai\"), reply in natural, human-sounding Bangla — NOT stiff Google-Translate Bangla.\nMatch the user's register: informal (তুমি/তোরা) vs formal (আপনি). Understand mixed Banglish.\n\nHUMAN HANDOFF: Set needs_human=true when the message involves any of: angry customer, refund, legal, complaint, abuse, order cancellation, payment failed, or an emergency. In that case do not attempt to resolve it — reply that a human will help shortly.\n\nSENTIMENT: Classify sentiment as one of: happy, neutral, confused, angry, urgent.\n\nLEAD CAPTURE: Extract any lead details the user reveals (name, phone, email, location, interest, budget, company). Leave a field as \"\" if not present.\n\nOUTPUT: Respond ONLY with a JSON object matching this exact shape:\n{\n  \"detected_language\": \"<language name>\",\n  \"language_code\": \"<ISO code, e.g. en, bn, hi>\",\n  \"reply\": \"<your reply in the user's language>\",\n  \"sentiment\": \"happy|neutral|confused|angry|urgent\",\n  \"intent\": \"<short intent label, e.g. price_inquiry, order, support, greeting>\",\n  \"needs_human\": true|false,\n  \"lead\": { \"name\": \"\", \"phone\": \"\", \"email\": \"\", \"location\": \"\", \"interest\": \"\", \"budget\": \"\", \"company\": \"\" }\n}"
+            },
+            {
+              "content": "={{ $json.messageText }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.6
+        }
+      },
+      "id": "21134209-4aec-446a-a61e-a1d7f654505f",
+      "name": "AI Support Reply",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        96
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "TvLhFZKFIvdZ7MLm",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const j = items[i].json;\n  let raw = '';\n  try { raw = j.output[0].content[0].text; } catch (e) { raw = j.text || j.content || \"\"; }\n  let data = {};\n  try { data = JSON.parse(raw); } catch (e) {\n    data = { reply: \"I'll connect you with a human.\", detected_language: 'unknown', language_code: '', sentiment: 'neutral', intent: 'unknown', needs_human: true, lead: {} };\n  }\n  const lead = data.lead || {};\n  const src = ($(\"Extract Message\").all()[i] || {}).json || {};\n  out.push({ json: {\n    senderId: src.senderId || '',\n    pageId: src.pageId || '',\n    messageText: src.messageText || '',\n    reply: data.reply || \"I'll connect you with a human.\",\n    detected_language: data.detected_language || 'unknown',\n    language_code: data.language_code || '',\n    sentiment: data.sentiment || 'neutral',\n    intent: data.intent || 'unknown',\n    needs_human: data.needs_human === true,\n    lead_name: lead.name || '', lead_phone: lead.phone || '', lead_email: lead.email || '',\n    lead_location: lead.location || '', lead_interest: lead.interest || '', lead_budget: lead.budget || '', lead_company: lead.company || '',\n    latency_ms: src.startTs ? (Date.now() - src.startTs) : 0,\n    receivedAt: src.receivedAt || new Date().toISOString(),\n  } });\n}\nreturn out;"
+      },
+      "id": "8b38c85c-c023-497e-a62a-1b2fc0c69608",
+      "name": "Parse AI Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "human",
+              "leftValue": "={{ $json.needs_human }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89400031-1a0b-42f8-a73a-7ea7c7f6b3f9",
+      "name": "Needs Human?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "<__PLACEHOLDER_VALUE__Admin Telegram chat ID__>",
+        "text": "=🚨 Human handoff needed\nSentiment: {{ $json.sentiment }}\nIntent: {{ $json.intent }}\nUser PSID: {{ $json.senderId }}\nPage: {{ $json.pageId }}\nMessage: {{ $json.messageText }}\nDetected language: {{ $json.detected_language }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ade96cd0-9052-4089-93d3-e03a6f5be131",
+      "name": "Alert Admin (Handoff)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        0
+      ],
+      "webhookId": "7a34cc7e-23e4-49f0-929c-468ea9c1959d"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Select Messenger logs spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $(\"Parse AI Result\").item.json.receivedAt }}",
+            "workflow": "Messenger Auto Reply",
+            "user": "={{ $(\"Parse AI Result\").item.json.senderId }}",
+            "language": "={{ $(\"Parse AI Result\").item.json.detected_language }}",
+            "message": "={{ $(\"Parse AI Result\").item.json.messageText }}",
+            "reply": "={{ $(\"Parse AI Result\").item.json.reply }}",
+            "sentiment": "={{ $(\"Parse AI Result\").item.json.sentiment }}",
+            "intent": "={{ $(\"Parse AI Result\").item.json.intent }}",
+            "status": "human_handoff",
+            "latency_ms": "={{ $(\"Parse AI Result\").item.json.latency_ms }}",
+            "error": ""
+          },
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user",
+              "displayName": "user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "reply",
+              "displayName": "reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sentiment",
+              "displayName": "sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "intent",
+              "displayName": "intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "latency_ms",
+              "displayName": "latency_ms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cf0aafe4-aa40-4712-ae7c-9d10bce23795",
+      "name": "Log Handoff",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/me/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "facebookGraphApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": { \"id\": \"{{ $json.senderId }}\" },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": { \"text\": {{ JSON.stringify($json.reply) }} }\n}",
+        "options": {}
+      },
+      "id": "92fea040-e7fd-49ae-ba01-8492fb221841",
+      "name": "Send Messenger Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1344,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Select Messenger logs spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $(\"Parse AI Result\").item.json.receivedAt }}",
+            "workflow": "Messenger Auto Reply",
+            "user": "={{ $(\"Parse AI Result\").item.json.senderId }}",
+            "language": "={{ $(\"Parse AI Result\").item.json.detected_language }}",
+            "message": "={{ $(\"Parse AI Result\").item.json.messageText }}",
+            "reply": "={{ $(\"Parse AI Result\").item.json.reply }}",
+            "sentiment": "={{ $(\"Parse AI Result\").item.json.sentiment }}",
+            "intent": "={{ $(\"Parse AI Result\").item.json.intent }}",
+            "status": "replied",
+            "latency_ms": "={{ $(\"Parse AI Result\").item.json.latency_ms }}",
+            "error": ""
+          },
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user",
+              "displayName": "user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "reply",
+              "displayName": "reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sentiment",
+              "displayName": "sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "intent",
+              "displayName": "intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "latency_ms",
+              "displayName": "latency_ms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a96c7ba-915c-4e4f-b7f9-58e0ef7025f6",
+      "name": "Log Replied",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "path": "messenger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "86f6f975-04a7-456d-b595-1d806dd1f0a2",
+      "name": "Messenger Verify (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        416
+      ],
+      "webhookId": "93fcd97e-3a41-4808-b196-19177b37f020"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query[\"hub.challenge\"] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f4138331-0f92-43c0-a66a-6b972516a0e8",
+      "name": "Respond Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        224,
+        416
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Messenger Events (POST)": {
+      "main": [
+        [
+          {
+            "node": "Ack 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack 200": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "AI Support Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Support Reply": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Result": {
+      "main": [
+        [
+          {
+            "node": "Needs Human?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Human?": {
+      "main": [
+        [
+          {
+            "node": "Alert Admin (Handoff)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Messenger Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Admin (Handoff)": {
+      "main": [
+        [
+          {
+            "node": "Log Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Messenger Reply": {
+      "main": [
+        [
+          {
+            "node": "Log Replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messenger Verify (GET)": {
+      "main": [
+        [
+          {
+            "node": "Respond Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a634d5c7-9ecd-440f-a21e-5e2f829ba1b8",
+  "meta": {
+    "instanceId": "74b7ad0db8da7b3984303adadf5f5f996e5b5dc4882117e1342310161e72d53a"
+  },
+  "nodeGroups": [],
+  "id": "XiZC2ds4pl5CWaXl",
+  "tags": []
+}
