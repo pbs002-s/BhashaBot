@@ -1,158 +1,150 @@
-<div align="center">
+# Signal Room — AI Messenger Auto-Reply Dashboard
 
-# BhashaBot
+A full-stack rebuild of the *AI Messenger Auto Reply* automation (originally an
+n8n workflow) as a standalone Next.js app: a live webhook that answers
+Facebook Messenger messages with an AI reply in the sender's own language,
+flags conversations for human handoff, captures leads, and streams
+everything into an animated live dashboard.
 
-**AI That Replies to Your Facebook Messages in Their Language**
+Every piece runs on a free tier / open-source project — nothing here requires
+a paid plan.
 
-Understands 18 languages — including real Bangla / Banglish — detects sentiment, intent & leads in one AI call, and knows when to hand off to a human.
+## What it does
 
-<br/>
+1. **Webhook** (`/api/messenger`) receives Messenger events, extracts the
+   text, and acknowledges Meta's platform instantly.
+2. **AI reply engine** (`lib/ai.ts`) detects the user's language, drafts a
+   reply in that language, scores sentiment, extracts lead details, and
+   decides if a human is needed — via Groq's free API (open-source Llama 3
+   models). No key configured → an offline rule-based fallback keeps the demo
+   fully working.
+3. **Human handoff** sends a Telegram alert (free Bot API) instead of an
+   auto-reply whenever the AI is unsure or the customer is upset.
+4. **Storage** (`lib/db.ts`) logs every conversation to SQLite (via the
+   open-source libSQL client) — a local file while developing, or a free
+   [Turso](https://turso.tech) database once deployed.
+5. **Dashboard** (`app/page.tsx`) polls the log every 3s and animates new
+   messages, sentiment, captured leads, and live stats in with Framer Motion
+   (restrained, transform/opacity-only motion, per the Emil Kowalski motion
+   discipline: quick 140–220ms transitions, small staggers, reduced-motion
+   respected).
 
-<a href="https://n8n.io"><img alt="n8n" src="https://img.shields.io/badge/n8n-EA4B71?style=flat-square&logo=n8n&logoColor=white"></a>
-<a href="https://openai.com"><img alt="OpenAI" src="https://img.shields.io/badge/GPT--4o-412991?style=flat-square&logo=openai&logoColor=white"></a>
-<a href="https://developers.facebook.com/docs/messenger-platform"><img alt="Messenger" src="https://img.shields.io/badge/Messenger%20Platform-0866FF?style=flat-square&logo=messenger&logoColor=white"></a>
-<a href="#"><img alt="Google Sheets" src="https://img.shields.io/badge/Google%20Sheets-34A853?style=flat-square&logo=googlesheets&logoColor=white"></a>
-<a href="#"><img alt="Telegram" src="https://img.shields.io/badge/Telegram%20Alerts-26A5E4?style=flat-square&logo=telegram&logoColor=white"></a>
-<br/>
-<img alt="Status" src="https://img.shields.io/badge/status-verified%20with%20mocks-orange?style=flat-square">
-<img alt="License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square">
+## Tech stack (all free & open source)
 
-</div>
+| Layer      | Choice                                    | License / cost |
+|------------|--------------------------------------------|-----------------|
+| Framework  | Next.js 14 (App Router)                    | MIT, free |
+| UI motion  | Framer Motion                              | MIT, free |
+| Styling    | Tailwind CSS                               | MIT, free |
+| Fonts      | Space Grotesk / Inter / JetBrains Mono, self-hosted via `@fontsource` | OFL, free, no external calls |
+| Database   | libSQL (SQLite) — local file or free Turso tier | Open source, free tier |
+| AI model   | Groq API serving Llama 3.x                 | Free tier, no card required |
+| Handoff    | Telegram Bot API                           | Free |
+| Channel    | Facebook Messenger (Meta Graph API)        | Free developer app |
+| Hosting    | Vercel (or Render/Railway) free tier        | Free tier |
 
-<br/>
+## Project structure
 
-## Overview
-
-**BhashaBot** *(Bhasha = "language")* is an n8n workflow that turns a Facebook Page inbox into a 24/7 multilingual support agent. It reads incoming Messenger messages, works out what language the customer is actually using — including natural, human-sounding **Bangla and Banglish** — and replies instantly in that same language and tone. Along the way it silently tags sentiment, intent, and any lead details the customer shares, and the instant a conversation turns into a refund, complaint, legal issue, or emergency, it stops guessing and pulls in a human.
-
-<div align="center">
-
-*One webhook. One AI call. One decision point.*
-
-</div>
-
-<br/>
-
-## Highlights
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**🌐 True multilingual replies**
-Detects the customer's language across 18 supported languages and replies in kind — no stiff, translated-sounding output.
-
-**🗣️ Real Bangla, not Google Translate Bangla**
-Understands Banglish ("*price koto? ami order korte chai*") and matches formal vs. informal register automatically.
-
-**🧠 One AI call, five jobs**
-A single GPT-4o call returns language, reply, sentiment, intent, lead data, and a handoff flag as structured JSON.
-
-</td>
-<td width="50%" valign="top">
-
-**🙋 Knows its limits**
-Refunds, complaints, legal issues, abuse, cancellations, failed payments, and emergencies are routed straight to a human — no attempted fix.
-
-**📋 Full conversation logging**
-Every message is logged to Google Sheets with sentiment, intent, latency, and status for later review.
-
-**✅ Meta-ready out of the box**
-A dedicated verification webhook handles the `hub.challenge` handshake automatically.
-
-</td>
-</tr>
-</table>
-
-<br/>
-
-## How it works
-
-```mermaid
-flowchart LR
-    A(["📩 Messenger Event"]) --> B["Messenger Events (POST)"]
-    B --> C["Ack 200\nEVENT_RECEIVED"]
-    C --> D["Extract Message\n(skip echoes/reads)"]
-    D --> E["AI Support Reply\nGPT-4o"]
-    E --> F["Parse AI Result"]
-    F --> G{"Needs Human?"}
-    G -- yes --> H["Alert Admin\n(Telegram)"]
-    H --> I[("Log Handoff")]
-    G -- no --> J["Send Messenger Reply\n(Graph API)"]
-    J --> K[("Log Replied")]
-
-    L(["🔗 Meta Verification"]) --> M["Messenger Verify (GET)"]
-    M --> N["Respond hub.challenge"]
-
-    style A fill:#25D366,color:#fff,stroke:none
-    style L fill:#0866FF,color:#fff,stroke:none
-    style G fill:#2C5364,color:#fff,stroke:none
-    style I fill:#34A853,color:#fff,stroke:none
-    style K fill:#34A853,color:#fff,stroke:none
+```
+app/
+  page.tsx                 dashboard UI
+  layout.tsx                fonts + global shell
+  api/messenger/route.ts    Meta webhook (GET verify / POST receive)
+  api/logs/route.ts         dashboard data feed
+  api/seed/route.ts         fires a fake message for live demos
+lib/
+  ai.ts        Groq call + offline fallback responder
+  db.ts        libSQL schema + queries
+  telegram.ts  human-handoff alert
+  messenger.ts sends the reply back to the user
+components/    animated dashboard pieces (Framer Motion)
 ```
 
-<br/>
+## Run it locally
 
-## Workflow nodes
+Requirements: Node.js 18+.
 
-| Node | Type | Role |
+```bash
+npm install
+cp .env.example .env.local     # fill in whichever keys you have — all optional
+npm run dev
+```
+
+Open http://localhost:3000. Click **"Send test message"** to fire a fake
+Messenger event straight into the webhook and watch it animate into the
+feed — no Facebook Page needed to see the app work.
+
+### Free API keys (all optional — the app degrades gracefully without them)
+
+| Service | Why | Get a free key |
 |---|---|---|
-| `Messenger Events (POST)` | Webhook | Entry point for all Messenger events |
-| `Ack 200` | Respond to Webhook | Immediately acknowledges receipt to Meta |
-| `Extract Message` | Code | Filters echoes/read receipts, pulls sender ID + text |
-| `AI Support Reply` | OpenAI (GPT-4o) | Language detection + reply + sentiment + intent + lead capture + handoff decision |
-| `Parse AI Result` | Code | Safely parses the AI's JSON, with a safe fallback |
-| `Needs Human?` | IF | Routes between AI-resolved and human-handoff paths |
-| `Send Messenger Reply` | Graph API | Sends the AI's reply back to the user |
-| `Alert Admin (Handoff)` | Telegram | Pings the admin with context when a human is needed |
-| `Log Replied` / `Log Handoff` | Google Sheets | Appends a full audit row per conversation |
-| `Messenger Verify (GET)` | Webhook | Handles Meta's webhook verification handshake |
-| `Respond Challenge` | Respond to Webhook | Echoes `hub.challenge` back to Meta |
+| Groq | Real AI replies (Llama 3) instead of the rule-based fallback | https://console.groq.com/keys |
+| Turso | Persistent database in production | https://turso.tech |
+| Telegram Bot | Human-handoff alerts | Message **@BotFather** on Telegram |
+| Meta for Developers | Connect a real Facebook Page | https://developers.facebook.com |
 
-<br/>
+## Deployment workflow (free hosting)
 
-## Setup
+### 1. Push to GitHub
+```bash
+git init
+git add .
+git commit -m "Signal Room dashboard"
+git branch -M main
+git remote add origin https://github.com/<you>/signal-room.git
+git push -u origin main
+```
 
-1. **Import** `AI_Messenger_Auto_Reply.json` into your n8n instance.
-2. **Connect credentials:**
+### 2. Create a free Turso database (persistent storage)
+Vercel's filesystem is read-only/ephemeral in production, so swap the local
+SQLite file for a free Turso (libSQL) database — same client code, zero
+changes needed.
 
-   | Credential | Status |
-   |---|---|
-   | OpenAI | ✅ already wired via n8n free credits |
-   | Facebook Graph API (`Send Messenger Reply`) | ⬜ needed |
-   | Telegram Bot + admin chat ID (`Alert Admin`) | ⬜ needed |
-   | Google Sheets + `Logs` tab | ⬜ needed |
+```bash
+# one-time CLI setup (free, no credit card)
+curl -sSfL https://get.tur.so/install.sh | bash
+turso auth signup
+turso db create signal-room
+turso db show signal-room --url          # -> TURSO_DATABASE_URL
+turso db tokens create signal-room       # -> TURSO_AUTH_TOKEN
+```
 
-3. **Set your Messenger webhook URL** in the Meta App dashboard:
-   ```
-   https://<your-n8n-domain>/webhook/messenger
-   ```
-   This single endpoint handles both the `GET` verification handshake and `POST` events.
-4. **Publish/activate** the workflow before Meta can reach it.
+### 3. Deploy to Vercel (free tier)
+1. Go to https://vercel.com → **New Project** → import the GitHub repo.
+2. Framework preset: Next.js (auto-detected).
+3. Add environment variables under **Settings → Environment Variables**:
+   - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
+   - `GROQ_API_KEY`, `GROQ_MODEL` (optional)
+   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (optional)
+   - `FB_PAGE_ACCESS_TOKEN`, `FB_VERIFY_TOKEN`, `FB_APP_SECRET` (optional)
+4. Click **Deploy**. You'll get a URL like `https://signal-room.vercel.app`.
 
-<br/>
+*(Render.com or Railway's free tiers work the same way — build command
+`npm run build`, start command `npm run start`.)*
 
-## Logged fields
+### 4. Connect a real Facebook Page (optional)
+1. Create a free app at https://developers.facebook.com → add the
+   **Messenger** product.
+2. Under **Messenger → Settings → Webhooks**, subscribe your Page and set:
+   - Callback URL: `https://<your-vercel-url>/api/messenger`
+   - Verify token: same value as `FB_VERIFY_TOKEN`
+3. Generate a Page access token and set it as `FB_PAGE_ACCESS_TOKEN` in
+   Vercel, then redeploy.
+4. Message the Page — replies and logs now flow through the live dashboard.
 
-`timestamp` · `workflow` · `user` · `language` · `message` · `reply` · `sentiment` · `intent` · `status` · `latency_ms` · `error`
+### 5. Set up the Telegram handoff bot (optional)
+1. Message **@BotFather** → `/newbot` → copy the token into
+   `TELEGRAM_BOT_TOKEN`.
+2. Send your new bot any message, then open
+   `https://api.telegram.org/bot<token>/getUpdates` and copy the numeric
+   `chat.id` into `TELEGRAM_CHAT_ID`.
 
-<br/>
+## Notes
 
-## Verification status
-
-> Logic and wiring have been verified end-to-end with **mocked** AI, Telegram, Graph API, and Sheets nodes. A live, no-mock run has not been performed yet — complete the credential setup above before going live.
-
-<br/>
-
-## Roadmap
-
-- [ ] Error-handling workflow (retry + Telegram alert + error log)
-- [ ] Workflow: Auto Facebook Posting
-- [ ] Workflow: Comment Auto-Reply
-- [ ] Analytics store decision (Google Sheets vs n8n Data Tables)
-
-<br/>
-
-<div align="center">
-<sub>Built on <a href="https://n8n.io">n8n</a> · Powered by GPT-4o</sub>
-</div>
+- All motion follows a single restrained language: 140–220ms transitions,
+  transform/opacity only, small staggers, and a `prefers-reduced-motion`
+  fallback in `globals.css`.
+- The AI system prompt, human-handoff rules, and lead-capture schema mirror
+  the original n8n workflow (`AI_Messenger_Auto_Reply.json`) one-for-one, so
+  behavior is a drop-in match — just running as ordinary application code
+  instead of inside n8n.
