@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { generateReply } from "@/lib/ai";
 import { insertLog } from "@/lib/db";
 import { alertHumanHandoff } from "@/lib/telegram";
@@ -21,7 +22,26 @@ export async function GET(req: NextRequest) {
 // --- POST: incoming Messenger events --------------------------------------
 export async function POST(req: NextRequest) {
   const startTs = Date.now();
-  const body = await req.json().catch(() => ({}));
+  const rawBody = await req.text();
+
+  // 1. Signature Verification (if FB_APP_SECRET is set)
+  const appSecret = process.env.FB_APP_SECRET;
+  const signature = req.headers.get("x-hub-signature-256");
+
+  if (appSecret && signature) {
+    const expectedSig = "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
+    if (signature !== expectedSig) {
+      console.warn("Invalid X-Hub-Signature-256 received");
+      return new NextResponse("Invalid signature", { status: 401 });
+    }
+  }
+
+  let body: any = {};
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ status: "INVALID_JSON" }, { status: 400 });
+  }
 
   const entry = body?.entry?.[0] || {};
   const messaging = entry?.messaging?.[0] || {};
@@ -49,6 +69,7 @@ export async function POST(req: NextRequest) {
     sentiment: ai.sentiment,
     intent: ai.intent,
     needsHuman: ai.needs_human,
+    source: "webhook",
     leadName: ai.lead.name,
     leadPhone: ai.lead.phone,
     leadEmail: ai.lead.email,
@@ -67,6 +88,9 @@ export async function POST(req: NextRequest) {
       pageId,
       messageText: text,
       detectedLanguage: ai.detected_language,
+      escalationReason: ai.escalation_reason,
+      leadName: ai.lead.name,
+      leadPhone: ai.lead.phone,
     });
   } else {
     await sendMessengerReply(senderId, ai.reply);

@@ -9,23 +9,49 @@ export async function alertHumanHandoff(params: {
   pageId: string;
   messageText: string;
   detectedLanguage: string;
+  escalationReason?: string;
+  leadName?: string;
+  leadPhone?: string;
 }) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return; // silently skip if not configured
+  if (!token || !chatId) {
+    console.log("[Telegram] Handoff alert skipped (keys not configured):", params.messageText);
+    return;
+  }
+
+  const leadLine = params.leadName || params.leadPhone
+    ? `\n👤 Customer: ${params.leadName || "Unnamed"} (${params.leadPhone || "No phone"})`
+    : "";
+
+  const reasonLine = params.escalationReason
+    ? `\n⚠️ Reason: ${params.escalationReason}`
+    : "";
 
   const text =
-    `🚨 Human handoff needed\n` +
-    `Sentiment: ${params.sentiment}\n` +
-    `Intent: ${params.intent}\n` +
-    `User PSID: ${params.senderId}\n` +
-    `Page: ${params.pageId}\n` +
-    `Message: ${params.messageText}\n` +
-    `Detected language: ${params.detectedLanguage}`;
+    `🚨 *HUMAN HANDOFF ALERT*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🎭 *Sentiment:* ${params.sentiment.toUpperCase()}\n` +
+    `🎯 *Intent:* ${params.intent}\n` +
+    `🌐 *Language:* ${params.detectedLanguage}\n` +
+    `🆔 *User PSID:* \`${params.senderId}\`${leadLine}${reasonLine}\n\n` +
+    `💬 *Message:*\n"${params.messageText}"`;
 
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  }).catch((err) => console.error("Telegram alert failed:", err));
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "Markdown",
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Telegram alert failed:", err);
+    }
+  } catch (err) {
+    console.error("Telegram alert request exception:", err);
+  }
 }
