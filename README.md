@@ -1,150 +1,132 @@
-# Signal Room — AI Messenger Auto-Reply Dashboard
+# BhashaBot — Multilingual AI Auto-Reply & Agent Command Center
 
-A full-stack rebuild of the *AI Messenger Auto Reply* automation (originally an
-n8n workflow) as a standalone Next.js app: a live webhook that answers
-Facebook Messenger messages with an AI reply in the sender's own language,
-flags conversations for human handoff, captures leads, and streams
-everything into an animated live dashboard.
+A full-stack, enterprise-grade multilingual customer support and agent handoff command center built with **Next.js 14**, **libSQL (SQLite/Turso)**, and **Groq / OpenAI (Llama 3.3)**.
 
-Every piece runs on a free tier / open-source project — nothing here requires
-a paid plan.
+BhashaBot automatically detects any customer language (Bengali, Banglish, Hindi, Spanish, French, English, etc.), grounds responses in customizable business knowledge, classifies sentiment & intents, extracts qualified lead entities, and triggers instant human handoff alerts to Telegram.
 
-## What it does
+---
 
-1. **Webhook** (`/api/messenger`) receives Messenger events, extracts the
-   text, and acknowledges Meta's platform instantly.
-2. **AI reply engine** (`lib/ai.ts`) detects the user's language, drafts a
-   reply in that language, scores sentiment, extracts lead details, and
-   decides if a human is needed — via Groq's free API (open-source Llama 3
-   models). No key configured → an offline rule-based fallback keeps the demo
-   fully working.
-3. **Human handoff** sends a Telegram alert (free Bot API) instead of an
-   auto-reply whenever the AI is unsure or the customer is upset.
-4. **Storage** (`lib/db.ts`) logs every conversation to SQLite (via the
-   open-source libSQL client) — a local file while developing, or a free
-   [Turso](https://turso.tech) database once deployed.
-5. **Dashboard** (`app/page.tsx`) polls the log every 3s and animates new
-   messages, sentiment, captured leads, and live stats in with Framer Motion
-   (restrained, transform/opacity-only motion, per the Emil Kowalski motion
-   discipline: quick 140–220ms transitions, small staggers, reduced-motion
-   respected).
+## 🌟 Key Features
 
-## Tech stack (all free & open source)
+1. **Multilingual AI Reply Engine (`lib/ai.ts`)**:
+   - Understands native scripts and romanized variations (e.g. Banglish, Hinglish).
+   - Generates contextual, friendly responses in the customer's exact language.
+   - Built-in smart offline multilingual NLP fallback for 100% reliability without API keys.
 
-| Layer      | Choice                                    | License / cost |
-|------------|--------------------------------------------|-----------------|
-| Framework  | Next.js 14 (App Router)                    | MIT, free |
-| UI motion  | Framer Motion                              | MIT, free |
-| Styling    | Tailwind CSS                               | MIT, free |
-| Fonts      | Space Grotesk / Inter / JetBrains Mono, self-hosted via `@fontsource` | OFL, free, no external calls |
-| Database   | libSQL (SQLite) — local file or free Turso tier | Open source, free tier |
-| AI model   | Groq API serving Llama 3.x                 | Free tier, no card required |
-| Handoff    | Telegram Bot API                           | Free |
-| Channel    | Facebook Messenger (Meta Graph API)        | Free developer app |
-| Hosting    | Vercel (or Render/Railway) free tier        | Free tier |
+2. **Interactive Live Testing Simulator (`SimulatorModal.tsx`)**:
+   - Test custom messages in any language with real-time NLP diagnostic telemetry (Language, Script, Sentiment Gauge, Intent, Lead Extraction Pills, Routing Outcome).
+   - Instant presets for Bengali orders, Banglish refund escalations, Hindi queries, B2B lead capture, and Spanish inquiries.
 
-## Project structure
+3. **Business Profile & Knowledge Base Grounding (`lib/knowledge.ts`)**:
+   - Dynamically injects store catalog, pricing tiers, delivery coverage across 64 districts, payment methods (bKash/Nagad/COD/Cards), and return/warranty policies.
 
-```
-app/
-  page.tsx                 dashboard UI
-  layout.tsx                fonts + global shell
-  api/messenger/route.ts    Meta webhook (GET verify / POST receive)
-  api/logs/route.ts         dashboard data feed
-  api/seed/route.ts         fires a fake message for live demos
-lib/
-  ai.ts        Groq call + offline fallback responder
-  db.ts        libSQL schema + queries
-  telegram.ts  human-handoff alert
-  messenger.ts sends the reply back to the user
-components/    animated dashboard pieces (Framer Motion)
-```
+4. **Human Agent Override & Conversation Inspector (`ConversationDrawer.tsx`)**:
+   - Inspect full conversation thread details and customer lead cards.
+   - Type manual agent replies directly from the dashboard to resolve escalations and push replies to Messenger.
 
-## Run it locally
+5. **Leads CRM Hub with 1-Click Export (`LeadsPanel.tsx`, `/api/leads/export`)**:
+   - Auto-extracts Name, Phone, Email, Location, Company, Budget, and Interest.
+   - 1-click **Export to CSV or JSON** for instant CRM import.
 
-Requirements: Node.js 18+.
+6. **Rich Visual Analytics & Intelligence (`AnalyticsPanel.tsx`)**:
+   - Customer sentiment emotional spectrum (Happy, Neutral, Confused, Angry, Urgent).
+   - Multilingual reach distribution and categorized inquiry intents.
+   - AI deflection rate and latency metrics.
+
+7. **Security & Webhook Hardening (`app/api/messenger/route.ts`)**:
+   - HMAC SHA-256 (`X-Hub-Signature-256`) signature validation with `FB_APP_SECRET`.
+   - Telegram Bot API integration for instant handoff alerts.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install & Run Locally
 
 ```bash
 npm install
-cp .env.example .env.local     # fill in whichever keys you have — all optional
 npm run dev
 ```
 
-Open http://localhost:3000. Click **"Send test message"** to fire a fake
-Messenger event straight into the webhook and watch it animate into the
-feed — no Facebook Page needed to see the app work.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Free API keys (all optional — the app degrades gracefully without them)
+- Click **"AI Test Playground"** to test custom messages across any language.
+- Click **"Fire Test Event"** to simulate live inbound traffic.
+- Explore the **Analytics & Trends**, **Leads CRM**, and **Knowledge Base** tabs.
 
-| Service | Why | Get a free key |
-|---|---|---|
-| Groq | Real AI replies (Llama 3) instead of the rule-based fallback | https://console.groq.com/keys |
-| Turso | Persistent database in production | https://turso.tech |
-| Telegram Bot | Human-handoff alerts | Message **@BotFather** on Telegram |
-| Meta for Developers | Connect a real Facebook Page | https://developers.facebook.com |
+### 2. Environment Variables (`.env.local`)
 
-## Deployment workflow (free hosting)
+All environment variables are optional. The system works completely out-of-the-box in local development with SQLite and the built-in multilingual rule engine:
 
-### 1. Push to GitHub
-```bash
-git init
-git add .
-git commit -m "Signal Room dashboard"
-git branch -M main
-git remote add origin https://github.com/<you>/signal-room.git
-git push -u origin main
+```env
+# Optional: Real AI Model via Groq (Free tier Llama 3.3) or OpenAI
+GROQ_API_KEY=
+GROQ_MODEL=llama-3.3-70b-versatile
+OPENAI_API_KEY=
+
+# Optional: Persistent Cloud DB via Turso (free tier: https://turso.tech)
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
+
+# Optional: Real Facebook Messenger Webhook
+FB_PAGE_ACCESS_TOKEN=
+FB_VERIFY_TOKEN=my-verify-token
+FB_APP_SECRET=
+
+# Optional: Telegram Alerts for Human Escalations
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 ```
 
-### 2. Create a free Turso database (persistent storage)
-Vercel's filesystem is read-only/ephemeral in production, so swap the local
-SQLite file for a free Turso (libSQL) database — same client code, zero
-changes needed.
+---
 
-```bash
-# one-time CLI setup (free, no credit card)
-curl -sSfL https://get.tur.so/install.sh | bash
-turso auth signup
-turso db create signal-room
-turso db show signal-room --url          # -> TURSO_DATABASE_URL
-turso db tokens create signal-room       # -> TURSO_AUTH_TOKEN
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14 (App Router, React 18, TypeScript)
+- **Styling**: Tailwind CSS, Cyber Dark Glassmorphic Design
+- **Motion**: Framer Motion
+- **Icons**: Lucide React
+- **Database**: libSQL (SQLite / Turso)
+- **AI Models**: Groq (Llama 3.3 70B), OpenAI, + Offline Multilingual NLP Engine
+- **Channels**: Facebook Messenger (Graph API), Telegram Bot API
+
+---
+
+## 📦 Project Architecture
+
 ```
-
-### 3. Deploy to Vercel (free tier)
-1. Go to https://vercel.com → **New Project** → import the GitHub repo.
-2. Framework preset: Next.js (auto-detected).
-3. Add environment variables under **Settings → Environment Variables**:
-   - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
-   - `GROQ_API_KEY`, `GROQ_MODEL` (optional)
-   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (optional)
-   - `FB_PAGE_ACCESS_TOKEN`, `FB_VERIFY_TOKEN`, `FB_APP_SECRET` (optional)
-4. Click **Deploy**. You'll get a URL like `https://signal-room.vercel.app`.
-
-*(Render.com or Railway's free tiers work the same way — build command
-`npm run build`, start command `npm run start`.)*
-
-### 4. Connect a real Facebook Page (optional)
-1. Create a free app at https://developers.facebook.com → add the
-   **Messenger** product.
-2. Under **Messenger → Settings → Webhooks**, subscribe your Page and set:
-   - Callback URL: `https://<your-vercel-url>/api/messenger`
-   - Verify token: same value as `FB_VERIFY_TOKEN`
-3. Generate a Page access token and set it as `FB_PAGE_ACCESS_TOKEN` in
-   Vercel, then redeploy.
-4. Message the Page — replies and logs now flow through the live dashboard.
-
-### 5. Set up the Telegram handoff bot (optional)
-1. Message **@BotFather** → `/newbot` → copy the token into
-   `TELEGRAM_BOT_TOKEN`.
-2. Send your new bot any message, then open
-   `https://api.telegram.org/bot<token>/getUpdates` and copy the numeric
-   `chat.id` into `TELEGRAM_CHAT_ID`.
-
-## Notes
-
-- All motion follows a single restrained language: 140–220ms transitions,
-  transform/opacity only, small staggers, and a `prefers-reduced-motion`
-  fallback in `globals.css`.
-- The AI system prompt, human-handoff rules, and lead-capture schema mirror
-  the original n8n workflow (`AI_Messenger_Auto_Reply.json`) one-for-one, so
-  behavior is a drop-in match — just running as ordinary application code
-  instead of inside n8n.
+BhashaBot/
+├── app/
+│   ├── api/
+│   │   ├── conversations/[id]/reply/   # Agent manual override & resolve
+│   │   ├── conversations/[id]/resolve/ # Toggle handoff status
+│   │   ├── leads/export/               # CSV / JSON export
+│   │   ├── knowledge/                  # Business Profile & FAQs CRUD
+│   │   ├── simulate/                   # Live AI testing playground endpoint
+│   │   ├── logs/                       # Conversation feed & analytics API
+│   │   ├── messenger/                  # Meta Webhook (GET verify / POST events)
+│   │   └── seed/                       # Realistic multilingual demo traffic generator
+│   ├── globals.css                     # Dark cyber tokens & scrollbar styles
+│   ├── layout.tsx                      # Root shell & typography
+│   └── page.tsx                        # Master Command Center Coordinator
+├── components/
+│   ├── AnalyticsPanel.tsx              # Sentiment, language & intent charts
+│   ├── ConversationDrawer.tsx          # Thread inspector & manual human reply box
+│   ├── ConversationFeed.tsx            # Live stream with multi-filters & search
+│   ├── CountUp.tsx                     # Numerical animation counter
+│   ├── DemoButton.tsx                  # Realistic event trigger
+│   ├── KnowledgePanel.tsx              # Business profile & FAQ editor
+│   ├── LeadsPanel.tsx                  # Leads CRM table & export hub
+│   ├── SentimentDot.tsx                # Emotional status badges
+│   ├── SimulatorModal.tsx              # Multilingual chat playground & diagnostics
+│   ├── StatsBar.tsx                    # Quick KPI summary metrics
+│   ├── StatusHeader.tsx                # Navigation tabs & audio chime toggle
+│   └── WebhookSettingsPanel.tsx        # Webhook & security inspector
+└── lib/
+    ├── ai.ts                           # Multilingual AI engine & smart fallback
+    ├── db.ts                           # SQLite / Turso client & analytics queries
+    ├── knowledge.ts                    # Business facts & prompt context builder
+    ├── messenger.ts                    # Facebook Graph API client
+    ├── telegram.ts                     # Markdown handoff alerts
+    └── types.ts                        # TypeScript interfaces & types
+```
