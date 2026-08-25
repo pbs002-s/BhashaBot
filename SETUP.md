@@ -1,229 +1,217 @@
-# Setup Guide — Signal Room
+# BhashaBot — Complete API Connection & Production Setup Guide
 
-This walks through **every connection**, in the order to do them, from "just
-run it on my laptop" all the way to "a real Facebook Page replying live."
-Each stage works on its own — you can stop after any stage and still have a
-working app.
-
-Total cost: **$0**. No credit card is required for any of these services.
+A complete, step-by-step manual to connect all external APIs (**Groq LLM / OpenAI**, **Facebook Messenger**, **Telegram Bot**, and **Turso SQLite**) to make **BhashaBot** 100% production-live.
 
 ---
 
-## Stage 0 — Run it with nothing connected
+## 🏗️ Architecture & Data Flow
 
-The app is designed to work with zero setup, using a built-in rule-based
-reply engine and a local file database. Do this first to confirm everything
-runs before connecting anything real.
+```
+[Customer on Facebook Messenger]
+            │
+            ▼ (HTTPS Webhook Event)
+[Next.js Webhook: /api/messenger]
+            │
+            ├──► 1. HMAC Signature Verification (FB_APP_SECRET)
+            ├──► 2. Knowledge Grounding (lib/knowledge.ts - Catalog & Policies)
+            ├──► 3. AI NLP Inference (Groq Llama 3.3 / OpenAI)
+            │      ├─ Multilingual Detection (Bengali, Banglish, Hindi, etc.)
+            │      ├─ Sentiment Spectrum (Happy, Neutral, Confused, Angry, Urgent)
+            │      ├─ Lead Entity Extraction (Name, Phone, Email, Location)
+            │      └─ Intent Classification
+            │
+            ├──► 4. Database Logging (libSQL / SQLite / Turso)
+            │
+            ├──► 5A. If needs_human = true ──► Push Alert to Telegram Bot
+            │                                   (with Customer Name, Phone & Reason)
+            │
+            └──► 5B. If automated reply ────► Send Reply via Meta Graph API
+                                                (in Customer's Exact Language)
+```
 
-**Requirements:** [Node.js](https://nodejs.org) version 18 or higher installed.
+---
+
+## 📋 Prerequisites & Free Services
+
+Every single service used by BhashaBot offers a **generous free tier with zero credit card required**:
+
+| Service | Purpose | Free Tier Allowance | Link |
+|---|---|---|---|
+| **Groq Cloud** | Llama 3.3 70B AI Inference | Fast open-source LLMs, no card | [console.groq.com](https://console.groq.com) |
+| **Telegram Bot API** | Human Escalation Alerts | Unlimited free messages | [@BotFather](https://t.me/BotFather) |
+| **Meta for Developers** | Facebook Messenger Webhook | Free developer app & webhook | [developers.facebook.com](https://developers.facebook.com) |
+| **Turso Database** | Cloud SQLite Storage | 500 databases, 9GB storage | [turso.tech](https://turso.tech) |
+| **Vercel** | Web Application Hosting | Free hobby tier with SSL | [vercel.com](https://vercel.com) |
+
+---
+
+## ⚡ Stage 0: Instant Local Run (Zero Configuration)
+
+BhashaBot works completely offline out-of-the-box using its built-in multilingual NLP rule engine and local SQLite database:
 
 ```bash
-cd ai-messenger-dashboard
+# 1. Install dependencies
 npm install
-cp .env.example .env.local
+
+# 2. Start the local server
 npm run dev
 ```
 
-Open **http://localhost:3000**. You'll see the dashboard with 0 conversations.
-
-Click **"Send test message"**. This fires a fake Facebook message straight
-into your own webhook (`/api/messenger`) and it should appear in the feed
-within a second or two, with a language tag, sentiment dot, and a reply.
-
-If that works, the core app is healthy. Everything below is optional — each
-section upgrades one piece.
-
-**Troubleshooting:**
-| Problem | Fix |
-|---|---|
-| `npm install` fails | Confirm `node -v` is 18+ |
-| Blank page / port in use | Another app is on port 3000 — run `npm run dev -- -p 3001` |
-| Nothing appears after clicking the button | Open browser dev tools → Network tab, check the `/api/seed` and `/api/logs` calls for errors |
+Open **`http://localhost:3000`** in your browser:
+- Click **"AI Test Playground"** to test custom messages across any language or script.
+- Click **"Fire Test Event"** to simulate live inbound customer conversations.
 
 ---
 
-## Stage 1 — Connect a real AI (Groq, free)
+## 🧠 Stage 1: Connect Real AI Model (Groq Llama 3.3 or OpenAI)
 
-Right now replies come from a simple keyword fallback. Connect Groq to get
-real multilingual AI replies (open-source Llama 3 models, generous free
-tier, no card needed).
+To enable deep language understanding, conversational nuance in native Bengali script and Romanized Banglish, and automatic lead entity extraction:
 
-1. Go to **https://console.groq.com** and sign up (email or Google login).
-2. Go to **API Keys** (left sidebar) → **Create API Key**.
-3. Copy the key — it starts with `gsk_...`.
-4. Open `.env.local` in the project and set:
-   ```
-   GROQ_API_KEY=gsk_your_key_here
+1. Visit **[Groq Console (console.groq.com/keys)](https://console.groq.com/keys)**.
+2. Sign up and click **Create API Key**. Copy your key (`gsk_...`).
+3. Create or open `.env.local` in the project root:
+   ```env
+   GROQ_API_KEY=gsk_your_groq_api_key_here
    GROQ_MODEL=llama-3.3-70b-versatile
    ```
-5. Restart the dev server (`Ctrl+C`, then `npm run dev`).
-6. Click **"Send test message"** again — the reply text should now sound
-   noticeably more natural and context-aware than before.
-
-**How to tell it's working:** check your terminal — if the key is wrong or
-missing, you'll see `AI generation failed, falling back:` in the logs and
-replies stay generic. No error in the terminal + more natural replies =
-connected correctly.
-
-**Which model to pick:** `llama-3.3-70b-versatile` is the most capable and
-still free; `llama-3.1-8b-instant` is faster/cheaper on Groq's limits if you
-expect high volume. Both are open-source Llama models.
+4. *(Optional)* If you prefer OpenAI, set:
+   ```env
+   OPENAI_API_KEY=sk-proj-your_openai_key_here
+   ```
+5. Restart the server (`Ctrl + C`, then `npm run dev`).
+6. **Verify**: Open the **AI Test Playground** in the dashboard and test a custom query. Responses will now be generated by Llama 3.3 with grounding from your business profile!
 
 ---
 
-## Stage 2 — Connect human-handoff alerts (Telegram, free)
+## 🚨 Stage 2: Connect Telegram Bot for Escalation Alerts
 
-When the AI decides a conversation needs a human (angry customer, refund,
-payment failure, etc.), it can ping you on Telegram instead of replying.
+When a customer expresses frustration, requests a refund, or demands a human agent, BhashaBot sends an instant rich alert to your private Telegram:
 
-1. Open Telegram, search for **@BotFather**, start a chat.
-2. Send `/newbot`, give it a name and a username (must end in `bot`, e.g.
-   `signalroom_alerts_bot`).
-3. BotFather replies with a token like `123456789:ABCdefGhIJKlmNoPQRstuVwxYZ`.
-   This is your `TELEGRAM_BOT_TOKEN`.
-4. **Important:** open a chat with your new bot and send it any message
-   (e.g. "hi") — Telegram bots can't message you until you've messaged them
-   first.
-5. In your browser, visit:
+1. Open Telegram and message **[@BotFather](https://t.me/BotFather)**.
+2. Send `/newbot`, name your bot (e.g. `BhashaBot Support`), and pick a username ending in `bot` (e.g. `bhashabot_support_bot`).
+3. BotFather will provide your **API Token** (e.g. `1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
+4. **Important**: Open a chat with your new bot and click **Start** or send any message (e.g. *"Hello"*).
+5. Find your numeric Telegram Chat ID by visiting this URL in your browser:
    ```
-   https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
    ```
-   Replace `<YOUR_TOKEN>` with the token from step 3. In the JSON response,
-   find `"chat":{"id":123456789,...}` — that number is your
-   `TELEGRAM_CHAT_ID`.
-6. Set both in `.env.local`:
-   ```
-   TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRstuVwxYZ
+   *(Replace `<YOUR_BOT_TOKEN>` with your token. In the JSON output, look for `"chat":{"id":123456789}`)*.
+6. Add both values to your `.env.local`:
+   ```env
+   TELEGRAM_BOT_TOKEN=1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ
    TELEGRAM_CHAT_ID=123456789
    ```
-7. Restart the dev server. Click **"Send test message"** a few times — the
-   sample pool includes an angry "refund NOW" message. When it comes up,
-   check Telegram — you should get a 🚨 alert message within a second.
-
-**Troubleshooting:** if nothing arrives, re-check step 4 (you must message
-the bot first) and confirm the chat ID has no extra characters.
+7. **Verify**: In the dashboard, switch to the **"Webhook & Settings"** tab and click **"Send Sample Handoff Alert to Telegram"**. Check your Telegram chat!
 
 ---
 
-## Stage 3 — Persistent database for production (Turso, free)
+## 💬 Stage 3: Connect a Real Facebook Messenger Page
 
-Skip this stage if you're only running locally — the local SQLite file
-(`local.db`) is enough. This stage matters only once you deploy, because
-hosts like Vercel wipe the local filesystem between requests.
+To automatically reply to messages on your Facebook Business Page:
+
+### 1. Create Meta Developer App
+1. Go to **[developers.facebook.com](https://developers.facebook.com)** → **My Apps** → **Create App**.
+2. Select **Other** → **Business** (or Consumer). Name your app `BhashaBot`.
+3. In the App Dashboard, find **Messenger** under "Add products to your app" and click **Set Up**.
+
+### 2. Generate Page Access Token
+1. In the left menu, navigate to **Messenger → Settings → Access Tokens**.
+2. Click **Add or remove Pages** and select your Facebook Page.
+3. Click **Generate Token**, copy the token, and add it to `.env.local`:
+   ```env
+   FB_PAGE_ACCESS_TOKEN=EAAG...your_page_access_token
+   ```
+
+### 3. Configure Webhook
+1. Still under **Messenger → Settings**, scroll down to **Webhooks** → **Add Callback URL**:
+   - **Callback URL**:
+     - **For Deployed Apps**: `https://your-domain.vercel.app/api/messenger`
+     - **For Local Development**: Run `npx localtunnel --port 3000` (or `ngrok http 3000`) and paste `https://your-tunnel.loca.lt/api/messenger`.
+   - **Verify Token**: `my-verify-token` (must match `FB_VERIFY_TOKEN`).
+2. Click **Verify and Save**. Meta will send a `GET` handshake to your endpoint and verify it.
+3. Under **Webhook fields**, click **Manage** and subscribe to:
+   - `messages`
+   - `messaging_postbacks`
+
+### 4. Enable HMAC SHA-256 Signature Security
+1. Go to **App Settings → Basic** in the Meta Developer console.
+2. Click **Show** next to **App Secret** and copy it.
+3. Add to `.env.local`:
+   ```env
+   FB_APP_SECRET=your_app_secret_here
+   FB_VERIFY_TOKEN=my-verify-token
+   ```
+
+---
+
+## 🗄️ Stage 4: Persistent Cloud Database (Turso — Free SQLite)
+
+Local SQLite (`local.db`) is ideal for development. On serverless platforms like Vercel, the filesystem resets between requests, so connect a free **Turso** cloud database:
 
 1. Install the Turso CLI:
    ```bash
+   # On macOS/Linux:
    curl -sSfL https://get.tur.so/install.sh | bash
+
+   # On Windows (PowerShell):
+   irm https://get.tur.so/install.ps1 | iex
    ```
-2. Sign up (free, no card):
+2. Authenticate and create a database:
    ```bash
    turso auth signup
+   turso db create bhashabot
    ```
-3. Create a database:
+3. Retrieve database URL and Auth Token:
    ```bash
-   turso db create signal-room
+   turso db show bhashabot --url
+   # Output: libsql://bhashabot-username.turso.io
+
+   turso db tokens create bhashabot
+   # Output: eyJhbGciOi...
    ```
-4. Get the connection URL:
-   ```bash
-   turso db show signal-room --url
-   ```
-   → this is your `TURSO_DATABASE_URL` (looks like
-   `libsql://signal-room-yourname.turso.io`).
-5. Create an auth token:
-   ```bash
-   turso db tokens create signal-room
-   ```
-   → this is your `TURSO_AUTH_TOKEN`.
-6. Add both to `.env.local` (for local testing against the cloud DB) and,
-   later, to your host's environment variables:
-   ```
-   TURSO_DATABASE_URL=libsql://signal-room-yourname.turso.io
+4. Add to `.env.local` and your Vercel Environment Variables:
+   ```env
+   TURSO_DATABASE_URL=libsql://bhashabot-username.turso.io
    TURSO_AUTH_TOKEN=eyJhbGciOi...
    ```
 
-The app's database code (`lib/db.ts`) doesn't change at all — the same
-libSQL client talks to a local file or to Turso depending on which
-variables are set.
-
 ---
 
-## Stage 4 — Deploy it (Vercel, free)
+## 🚀 Stage 5: Deploy to Production (Vercel)
 
-1. Push the project to GitHub:
+1. Push your repository to GitHub:
    ```bash
-   git init
-   git add .
-   git commit -m "Signal Room dashboard"
-   git branch -M main
-   git remote add origin https://github.com/<you>/signal-room.git
-   git push -u origin main
+   git push origin main
    ```
-2. Go to **https://vercel.com**, sign up with GitHub (free).
-3. **New Project** → import your `signal-room` repo → Vercel auto-detects
-   Next.js → click **Deploy**.
-4. Once deployed, go to **Settings → Environment Variables** and add every
-   key you've collected so far:
-   - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (Stage 3 — required in
-     production, or data won't persist between requests)
-   - `GROQ_API_KEY`, `GROQ_MODEL` (Stage 1)
-   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (Stage 2)
-5. Go to **Deployments** → click the **⋯** menu on the latest deploy →
-   **Redeploy** (so it picks up the new environment variables).
-6. Visit your live URL (e.g. `https://signal-room.vercel.app`) and confirm
-   **"Send test message"** still works there.
-
-*(Render.com and Railway have equivalent free tiers if you'd rather not use
-Vercel — same environment variables, build command `npm run build`, start
-command `npm run start`.)*
+2. Go to **[Vercel (vercel.com)](https://vercel.com)** → **Add New Project** → Import your GitHub repository.
+3. Under **Environment Variables**, add:
+   - `GROQ_API_KEY` & `GROQ_MODEL`
+   - `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID`
+   - `FB_PAGE_ACCESS_TOKEN`, `FB_VERIFY_TOKEN`, `FB_APP_SECRET`
+   - `TURSO_DATABASE_URL` & `TURSO_AUTH_TOKEN`
+4. Click **Deploy**. Vercel will build and assign an HTTPS domain (e.g., `https://bhashabot.vercel.app`).
+5. Update your Meta Webhook URL to `https://bhashabot.vercel.app/api/messenger`.
 
 ---
 
-## Stage 5 — Connect a real Facebook Page (optional)
+## 📚 Stage 6: Customize Business Knowledge & Catalog
 
-Only do this once Stage 4 is live — Meta needs a public HTTPS URL to send
-webhooks to; `localhost` won't work here.
-
-1. Go to **https://developers.facebook.com** → **My Apps** → **Create App**
-   → choose **"Other"** → **"Business"** as the type → name it anything.
-2. In the app dashboard, find **Messenger** in the products list → **Set Up**.
-3. Under **Messenger → Settings → Access Tokens**, connect (or create) a
-   Facebook Page you manage, and **Generate Token**. Copy it — this is your
-   `FB_PAGE_ACCESS_TOKEN`.
-4. Still under **Messenger → Settings**, scroll to **Webhooks** →
-   **Add Callback URL**:
-   - Callback URL: `https://<your-vercel-url>/api/messenger`
-   - Verify Token: any string you choose, e.g. `my-verify-token` — just
-     make sure it matches `FB_VERIFY_TOKEN`
-   - Click **Verify and Save**. If this fails, double-check the deployed
-     app is live and the verify token matches exactly.
-5. Under **Webhook fields**, subscribe to `messages` (and optionally
-   `messaging_postbacks`).
-6. Back in Vercel, add:
-   ```
-   FB_PAGE_ACCESS_TOKEN=EAAG...
-   FB_VERIFY_TOKEN=my-verify-token
-   ```
-   and redeploy.
-7. Message your Facebook Page from a personal account. It should appear
-   in the live dashboard within a couple seconds, and you should receive
-   an actual reply on Messenger.
-
-**Note:** while your app is in Facebook's "Development" mode, only accounts
-listed as testers/admins on the app can message the Page. Full public access
-requires Meta's App Review — normal for any Messenger bot, free either way.
+The AI grounds its responses in your store's factual business profile:
+1. Open the dashboard and switch to the **"Knowledge Base"** tab.
+2. Edit:
+   - **Store Name & Tagline**
+   - **Delivery Timelines & Shipping Fees** (e.g. Dhaka 24-48h, Nationwide 2-4 days)
+   - **Return & Warranty Policies** (e.g. 7-day hassle-free exchange)
+   - **Product Catalog & Pricing**
+   - **Frequently Asked Questions (FAQs)**
+3. Click **Save Knowledge Base**. The AI will immediately utilize this updated context for customer inquiries in any language.
 
 ---
 
-## Full checklist
+## 🎯 Verification Checklist
 
-| # | Connect | Required for | Cost |
-|---|---|---|---|
-| 0 | Nothing | Local demo | Free |
-| 1 | Groq API key | Real AI replies | Free |
-| 2 | Telegram bot | Human-handoff alerts | Free |
-| 3 | Turso database | Data surviving on a live server | Free |
-| 4 | Vercel + GitHub | A public URL | Free |
-| 5 | Meta developer app + Page | Real Facebook Messenger traffic | Free |
-
-You can stop at any row and have a working system — each stage only adds
-capability, nothing later depends on skipping ahead.
+- [x] **AI Test Playground**: Custom inputs in Bengali, Banglish, Hindi, and English return accurate replies.
+- [x] **Lead Capture CRM**: Names, phone numbers, and emails are auto-extracted and downloadable via **Export CSV/JSON**.
+- [x] **Telegram Alerts**: Angry/urgent messages trigger instant Telegram alerts.
+- [x] **Agent Human Override**: Support agents can type manual replies directly from the Conversation Inspector Drawer to resolve escalations.
+- [x] **Facebook Webhook**: Real Facebook messages receive instant automated replies in the sender's language.
