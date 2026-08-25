@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --font-display: "Space Grotesk", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", var(--font-bengali), "Hind Siliguri", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", var(--font-bengali), "Hind Siliguri", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-bangla: var(--font-bengali), "Hind Siliguri", "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Code", monospace;
 }
 
@@ -13,23 +14,40 @@
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
+  background-color: #090D12;
+  color: #EDEFF2;
+  font-family: var(--font-body);
 }
 
 ::selection {
   background: #FFB454;
-  color: #0B0F14;
+  color: #090D12;
+}
+
+.font-bangla {
+  font-family: var(--font-bangla);
 }
 
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #1E2733;
+  background: #1D2838;
   border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #28374D;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.glass-panel {
+  background: rgba(16, 22, 32, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(29, 40, 56, 0.9);
 }
 
 @media (prefers-reduced-motion: reduce) {
