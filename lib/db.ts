@@ -29,6 +29,8 @@ export function initDb() {
           agentReply TEXT DEFAULT '',
           agentRepliedAt TEXT DEFAULT '',
           source TEXT DEFAULT 'webhook',
+          platform TEXT DEFAULT 'web',
+          mood TEXT DEFAULT '',
           leadName TEXT,
           leadPhone TEXT,
           leadEmail TEXT,
@@ -54,6 +56,12 @@ export function initDb() {
       try {
         await db.execute(`ALTER TABLE logs ADD COLUMN source TEXT DEFAULT 'webhook'`);
       } catch {}
+      try {
+        await db.execute(`ALTER TABLE logs ADD COLUMN platform TEXT DEFAULT 'web'`);
+      } catch {}
+      try {
+        await db.execute(`ALTER TABLE logs ADD COLUMN mood TEXT DEFAULT ''`);
+      } catch {}
     })();
   }
   return ready;
@@ -65,10 +73,10 @@ export async function insertLog(row: Omit<ConversationLog, "id" | "createdAt">):
   const res = await db.execute({
     sql: `INSERT INTO logs
       (senderId, pageId, messageText, reply, detectedLanguage, languageCode,
-       sentiment, intent, needsHuman, isResolved, agentReply, agentRepliedAt, source,
+       sentiment, intent, needsHuman, isResolved, agentReply, agentRepliedAt, source, platform, mood,
        leadName, leadPhone, leadEmail, leadLocation, leadInterest, leadBudget, leadCompany,
        latencyMs, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       row.senderId,
       row.pageId,
@@ -83,6 +91,8 @@ export async function insertLog(row: Omit<ConversationLog, "id" | "createdAt">):
       row.agentReply || "",
       row.agentRepliedAt || "",
       row.source || "webhook",
+      row.platform || "web",
+      row.mood || "",
       row.leadName || "",
       row.leadPhone || "",
       row.leadEmail || "",
@@ -267,6 +277,8 @@ function mapRowToLog(r: any): ConversationLog {
     agentReply: String(r.agentReply || ""),
     agentRepliedAt: String(r.agentRepliedAt || ""),
     source: (r.source as any) || "webhook",
+    platform: String(r.platform || "web"),
+    mood: String(r.mood || ""),
     leadName: String(r.leadName || ""),
     leadPhone: String(r.leadPhone || ""),
     leadEmail: String(r.leadEmail || ""),
