@@ -1,9 +1,14 @@
 "use client";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Sparkles, Loader2 } from "lucide-react";
 
+import { useState } from "react";
+import { CircleNotch, ShuffleAngular } from "@phosphor-icons/react/dist/ssr";
+import { useT } from "./providers/AppProviders";
+import { Button } from "./ui/primitives";
+
+/** Fires one realistic multilingual message at the webhook so an empty desk
+ *  can be seen working end to end. */
 export default function DemoButton({ onSent }: { onSent?: () => void }) {
+  const t = useT();
   const [loading, setLoading] = useState(false);
 
   async function trigger() {
@@ -12,28 +17,25 @@ export default function DemoButton({ onSent }: { onSent?: () => void }) {
       await fetch("/api/seed", { method: "POST" });
       onSent?.();
     } catch (err) {
-      console.error("Seed error:", err);
+      console.error("Test event failed:", err);
     } finally {
-      setTimeout(() => setLoading(false), 300);
+      window.setTimeout(() => setLoading(false), 320);
     }
   }
 
   return (
-    <motion.button
+    <Button
       onClick={trigger}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ duration: 0.15 }}
       disabled={loading}
-      className="flex items-center gap-1.5 rounded-lg border border-signal/40 bg-signal/15 px-3.5 py-1.5 font-body text-xs font-medium text-signal transition-all hover:bg-signal/25 hover:border-signal active:scale-95 disabled:opacity-50"
-      title="Fires a random realistic multilingual customer message into the webhook"
+      leadingIcon={
+        loading ? (
+          <CircleNotch size={13} className="animate-spin" />
+        ) : (
+          <ShuffleAngular size={13} />
+        )
+      }
     >
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <Sparkles className="h-3.5 w-3.5" />
-      )}
-      <span>{loading ? "Simulating…" : "Fire Test Event"}</span>
-    </motion.button>
+      {loading ? t("action.firing") : t("action.fireTest")}
+    </Button>
   );
 }

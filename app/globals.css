@@ -2,56 +2,368 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   BhashaBot design tokens
+   One warm neutral family (never mixed warm/cool greys), one accent
+   (saffron), and status hues held below 80% saturation so nothing screams.
+   ========================================================================== */
+
 :root {
-  --font-display: "Space Grotesk", var(--font-bengali), "Hind Siliguri", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", var(--font-bengali), "Hind Siliguri", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-bangla: var(--font-bengali), "Hind Siliguri", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Outfit Variable", var(--font-bengali), "Hind Siliguri", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans Variable", var(--font-bengali), "Hind Siliguri", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-bangla: var(--font-bengali), "Hind Siliguri", "Plus Jakarta Sans Variable", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Code", monospace;
+
+  /* --- Daylight (warm paper) --- */
+  --c-ink: 246 243 237;
+  --c-panel: 253 251 247;
+  --c-panel-card: 241 237 229;
+  --c-panel-hover: 234 229 219;
+  --c-line: 226 220 209;
+  --c-line-light: 205 197 182;
+  --c-paper: 26 24 21;
+  --c-fog: 110 103 92;
+  --c-fog-light: 138 130 118;
+  --c-signal: 173 92 20;
+  --c-signal-soft: 216 143 66;
+  --c-on-signal: 253 251 247;
+  --c-mint: 25 111 84;
+  --c-coral: 174 58 50;
+  --c-sky: 31 100 133;
+  --c-violet: 100 74 156;
+  --c-blush: 178 52 96;
+  --c-honey: 166 116 22;
+  --c-shadow: 68 56 38;
+  --c-inner-light: 255 255 255;
+
+  --grain-opacity: 0.05;
+  --glow-a: 173 92 20;
+  --glow-b: 31 100 133;
+  --glow-strength: 0.1;
+
+  color-scheme: light;
+}
+
+.dark {
+  /* --- Nightfall (warm charcoal, never blue-black, never #000) --- */
+  --c-ink: 13 12 11;
+  --c-panel: 22 20 18;
+  --c-panel-card: 29 26 24;
+  --c-panel-hover: 38 34 31;
+  --c-line: 44 39 36;
+  --c-line-light: 62 56 51;
+  --c-paper: 240 236 228;
+  --c-fog: 152 143 131;
+  --c-fog-light: 187 178 165;
+  --c-signal: 233 160 79;
+  --c-signal-soft: 246 199 143;
+  --c-on-signal: 24 17 8;
+  --c-mint: 106 210 173;
+  --c-coral: 237 122 112;
+  --c-sky: 110 190 226;
+  --c-violet: 182 156 240;
+  --c-blush: 240 145 178;
+  --c-honey: 232 186 96;
+  --c-shadow: 0 0 0;
+  --c-inner-light: 255 255 255;
+
+  --grain-opacity: 0.07;
+  --glow-a: 233 160 79;
+  --glow-b: 110 190 226;
+  --glow-strength: 0.14;
+
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   Minimal Accent Color Palettes
+   ========================================================================== */
+html[data-color="sage"]:not(.dark) {
+  --c-signal: 40 102 75;
+  --c-signal-soft: 86 148 119;
+  --glow-a: 40 102 75;
+}
+html[data-color="cobalt"]:not(.dark) {
+  --c-signal: 37 98 140;
+  --c-signal-soft: 85 145 186;
+  --glow-a: 37 98 140;
+}
+html[data-color="terracotta"]:not(.dark) {
+  --c-signal: 168 70 54;
+  --c-signal-soft: 210 114 98;
+  --glow-a: 168 70 54;
+}
+html[data-color="dusk"]:not(.dark) {
+  --c-signal: 106 75 148;
+  --c-signal-soft: 152 122 194;
+  --glow-a: 106 75 148;
+}
+html[data-color="mono"]:not(.dark) {
+  --c-signal: 70 66 61;
+  --c-signal-soft: 118 113 107;
+  --glow-a: 70 66 61;
+}
+
+html[data-color="sage"].dark {
+  --c-signal: 112 195 156;
+  --c-signal-soft: 158 219 190;
+  --c-on-signal: 14 26 19;
+  --glow-a: 112 195 156;
+}
+html[data-color="cobalt"].dark {
+  --c-signal: 104 178 226;
+  --c-signal-soft: 157 208 243;
+  --c-on-signal: 12 24 33;
+  --glow-a: 104 178 226;
+}
+html[data-color="terracotta"].dark {
+  --c-signal: 232 126 110;
+  --c-signal-soft: 244 173 161;
+  --c-on-signal: 31 15 13;
+  --glow-a: 232 126 110;
+}
+html[data-color="dusk"].dark {
+  --c-signal: 178 150 230;
+  --c-signal-soft: 210 190 245;
+  --c-on-signal: 23 15 33;
+  --glow-a: 178 150 230;
+}
+html[data-color="mono"].dark {
+  --c-signal: 210 205 197;
+  --c-signal-soft: 235 232 227;
+  --c-on-signal: 22 20 18;
+  --glow-a: 210 205 197;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
   min-height: 100%;
-  background-color: #090D12;
-  color: #EDEFF2;
+  background-color: rgb(var(--c-ink));
+  color: rgb(var(--c-paper));
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  transition: background-color 420ms cubic-bezier(0.32, 0.72, 0, 1),
+    color 420ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 ::selection {
-  background: #FFB454;
-  color: #090D12;
+  background: rgb(var(--c-signal) / 0.28);
+  color: rgb(var(--c-paper));
+}
+
+/* Numerals in a data console must never dance while they animate. */
+.tabular,
+table,
+time,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 .font-bangla {
   font-family: var(--font-bangla);
+  letter-spacing: 0;
 }
 
+html[lang="bn"] body {
+  font-family: var(--font-bangla);
+}
+
+/* Bengali conjuncts break apart under tracking, so the wide Latin tracking
+   utilities are neutralised whenever the interface is in Bangla. */
+html[lang="bn"] [class*="tracking-["] {
+  letter-spacing: 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Focus: one visible ring everywhere, keyboard only.
+   -------------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid rgb(var(--c-signal));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 90;
+  padding: 0.65rem 1rem;
+  border-radius: 0.625rem;
+  background: rgb(var(--c-signal));
+  color: rgb(var(--c-on-signal));
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: top 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbars
+   -------------------------------------------------------------------------- */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-line-light)) transparent;
+}
 .scrollbar-thin::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #1D2838;
+  background: rgb(var(--c-line-light));
   border-radius: 999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #28374D;
+  background: rgb(var(--c-fog));
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.glass-panel {
-  background: rgba(16, 22, 32, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(29, 40, 56, 0.9);
+/* --------------------------------------------------------------------------
+   Ambient layers — both fixed and pointer-events:none so scrolling content
+   never triggers a repaint of the noise or the gradient.
+   -------------------------------------------------------------------------- */
+.ambient-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient-glow span {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+}
+.ambient-glow .glow-1 {
+  width: 46vw;
+  height: 46vw;
+  top: -14vw;
+  left: -6vw;
+  background: rgb(var(--glow-a) / var(--glow-strength));
+}
+.ambient-glow .glow-2 {
+  width: 38vw;
+  height: 38vw;
+  bottom: -16vw;
+  right: -8vw;
+  background: rgb(var(--glow-b) / var(--glow-strength));
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces
+   -------------------------------------------------------------------------- */
+.glass-island {
+  background: rgb(var(--c-panel) / 0.82);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+/* Card borders that light up under the cursor. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    220px circle at var(--mx, 50%) var(--my, 0%),
+    rgb(var(--c-signal) / 0.55),
+    transparent 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(var(--c-panel-card));
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--c-line-light) / 0.5),
+    transparent
+  );
+  animation: shimmer 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Native form controls follow the theme instead of the OS. */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+input[type="checkbox"] {
+  accent-color: rgb(var(--c-signal));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;

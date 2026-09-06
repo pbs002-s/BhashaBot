@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Chat Widget Demo — BhashaBot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* Dark Theme (Nightfall) */
+    html.theme-dark {
+      --ink: #0D0C0B;
+      --panel: #161412;
+      --panel-card: #1D1A18;
+      --panel-hover: #262320;
+      --paper: #F0ECE4;
+      --fog: #988F83;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-light: rgba(255, 255, 255, 0.16);
+      --signal: #E27D60;
+      --mint: #22c55e;
+      --code-bg: #090807;
+      --preview-chat-bg: #141210;
+      --preview-bubble-bot: #221F1C;
+      --preview-bubble-user: #E27D60;
+      --glow-1: rgba(226, 125, 96, 0.09);
+      --glow-2: rgba(56, 189, 248, 0.07);
+    }
+
+    /* Light Theme (Daylight) */
+    html.theme-light {
+      --ink: #F6F3ED;
+      --panel: #FFFFFF;
+      --panel-card: #EDE7DC;
+      --panel-hover: #E3DCcf;
+      --paper: #1A1815;
+      --fog: #6E675C;
+      --line: rgba(0, 0, 0, 0.09);
+      --line-light: rgba(0, 0, 0, 0.18);
+      --signal: #C45737;
+      --mint: #16a34a;
+      --code-bg: #EAE4D8;
+      --preview-chat-bg: #F8F6F0;
+      --preview-bubble-bot: #FFFFFF;
+      --preview-bubble-user: #C45737;
+      --glow-1: rgba(226, 125, 96, 0.06);
+      --glow-2: rgba(56, 189, 248, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+    }
+
+    body {
+      background-color: var(--ink);
+      color: var(--paper);
+      font-family: "Plus Jakarta Sans", -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient background glowing orbs */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .glow-1 {
+      position: absolute;
+      top: -10%;
+      left: 20%;
+      width: 620px;
+      height: 620px;
+      background: radial-gradient(circle, var(--glow-1) 0%, transparent 70%);
+      filter: blur(80px);
+    }
+    .glow-2 {
+      position: absolute;
+      top: 45%;
+      right: 10%;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle, var(--glow-2) 0%, transparent 70%);
+      filter: blur(90px);
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 86rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header Nav */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .brand-links {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .brand-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: var(--paper);
+      font-family: "Outfit", sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      text-decoration: none;
+      color: var(--fog);
+      background: var(--panel-card);
+      border: 1px solid var(--line);
+      padding: 0.42rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .nav-pill:hover {
+      border-color: var(--line-light);
+      color: var(--paper);
+      background: var(--panel-hover);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .theme-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--panel-card);
+      border: 1px solid var(--line);
+      color: var(--paper);
+      padding: 0.42rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .theme-btn:hover {
+      border-color: var(--line-light);
+      background: var(--panel-hover);
+    }
+    .theme-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      color: var(--mint);
+      padding: 0.42rem 0.9rem;
+      border-radius: 9999px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+    }
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 6px var(--mint);
+    }
+
+    /* Hero */
+    .hero {
+      max-width: 52rem;
+      margin-bottom: 3.5rem;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--fog);
+      margin-bottom: 0.85rem;
+    }
+    .title {
+      font-family: "Outfit", sans-serif;
+      font-size: clamp(2.4rem, 5vw, 3.4rem);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.05;
+      color: var(--paper);
+      margin-bottom: 1.25rem;
+    }
+    .subtitle {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: var(--fog);
+      max-width: 44rem;
+    }
+
+    /* Main Showcase Area */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      margin-bottom: 3.5rem;
+    }
+    @media (max-width: 900px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left: Features & Code */
+    .features-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .card h3 {
+      font-family: "Outfit", sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 0.5rem;
+    }
+    .card p {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: var(--fog);
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 0.75rem;
+      background: var(--panel-card);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: var(--signal);
+    }
+
+    /* Code Block */
+    .code-box {
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      color: var(--signal);
+      line-height: 1.5;
+      margin-top: 1rem;
+    }
+
+    .copy-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .copy-row span {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      color: var(--fog);
+      text-transform: uppercase;
+    }
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--panel-card);
+      border: 1px solid var(--line);
+      color: var(--paper);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+    .copy-btn:hover {
+      background: var(--panel-hover);
+    }
+
+    /* Right: Interactive Chat UI Preview Card */
+    .preview-card {
+      background: var(--preview-chat-bg);
+      border: 1px solid var(--line);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.1);
+    }
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .preview-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .preview-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--signal);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-user h4 {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--paper);
+    }
+    .preview-user span {
+      font-size: 0.7rem;
+      color: var(--fog);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .preview-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .chat-bubble {
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+    .chat-bubble.bot {
+      background: var(--preview-bubble-bot);
+      border: 1px solid var(--line);
+      color: var(--paper);
+      align-self: flex-start;
+      border-bottom-left-radius: 0.25rem;
+    }
+    .chat-bubble.user {
+      background: var(--preview-bubble-user);
+      color: #ffffff;
+      align-self: flex-end;
+      border-bottom-right-radius: 0.25rem;
+    }
+
+    .preview-footer {
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--fog);
+    }
+
+    /* Instruction banner */
+    .banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: rgba(226, 125, 96, 0.08);
+      border: 1px solid rgba(226, 125, 96, 0.25);
+      border-radius: 1rem;
+      padding: 1.1rem 1.5rem;
+    }
+    .banner-text {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--paper);
+    }
+    .banner-text svg {
+      color: var(--signal);
+      flex-shrink: 0;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding-top: 2rem;
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--fog);
+    }
+    footer a {
+      color: var(--fog);
+      text-decoration: none;
+    }
+    footer a:hover {
+      color: var(--paper);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <div class="wrapper">
+    <!-- Header -->
+    <header>
+      <div class="brand-links">
+        <a href="/" class="brand-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+            <path d="M8 12h8" />
+            <path d="M12 8v8" />
+          </svg>
+          BhashaBot
+        </a>
+        <a href="/" class="nav-pill">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Reply Desk
+        </a>
+        <a href="/servers" class="nav-pill">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5"/>
+            <line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+          Bot Clients
+        </a>
+        <a href="/moods" class="nav-pill">
+          Moods
+        </a>
+      </div>
+
+      <div class="header-actions">
+        <!-- Daylight / Nightfall Theme Switcher -->
+        <button id="theme-switch-btn" class="theme-btn" type="button" title="Switch Daylight / Nightfall mode">
+          <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <span id="theme-text">Daylight</span>
+        </button>
+
+        <div class="status-badge">
+          <span class="pulse-dot"></span>
+          <span>Widget Ready</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="eyebrow">
+        <span>Embeddable Web Client</span>
+      </div>
+      <h1 class="title">Website Live Chat Widget Demo</h1>
+      <p class="subtitle">
+        This page demonstrates BhashaBot running as an embeddable website widget with full Daylight and Nightfall theme support. Look at the bottom-right corner to start an interactive chat.
+      </p>
+    </section>
+
+    <!-- Showcase Grid -->
+    <div class="showcase-grid">
+      <!-- Left Column: Embed Docs -->
+      <div class="features-column">
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </div>
+          <h3>Single-Line Drop In</h3>
+          <p>Include the script tag on any webpage, blog, documentation site, or portfolio without building custom chat UI.</p>
+
+          <div class="code-box">
+            <div class="copy-row">
+              <span>Embed snippet</span>
+              <button id="copy-btn" class="copy-btn" type="button">
+                <span id="copy-label">Copy Code</span>
+              </button>
+            </div>
+            <code>&lt;!-- Drop this into any website body --&gt;<br/>&lt;script src="http://localhost:3000/widget.js" data-title="BhashaBot"&gt;&lt;/script&gt;</code>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              <path d="M2 12h20"/>
+            </svg>
+          </div>
+          <h3>Multilingual Language Matching</h3>
+          <p>Automatically understands native Bengali script, Romanized Banglish, Hindi, and English, matching the customer's exact phrasing.</p>
+        </div>
+      </div>
+
+      <!-- Right Column: UI Design Preview -->
+      <div class="preview-card">
+        <div>
+          <div class="preview-header">
+            <div class="preview-user">
+              <div class="preview-avatar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+              </div>
+              <div>
+                <h4>BhashaBot Assistant</h4>
+                <span><span class="pulse-dot"></span> Online Desk</span>
+              </div>
+            </div>
+            <span class="nav-pill" style="font-size:0.68rem; padding: 0.2rem 0.6rem;">Live UI</span>
+          </div>
+
+          <div class="preview-stream">
+            <div class="chat-bubble bot">
+              Hello! Ask me anything in English, বাংলা, or Romanized Banglish.
+            </div>
+            <div class="chat-bubble user">
+              apnader delivery charge koto?
+            </div>
+            <div class="chat-bubble bot">
+              Dhaka er bhitore 60 taka, ebong Dhaka er baire 120 taka. Apnar location ta bolle order confirm kore dicchi!
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-footer">
+          <span>Theme: Daylight & Nightfall</span>
+          <span>Zero External Emojis</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive notice -->
+    <div class="banner">
+      <div class="banner-text">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>Click the launcher icon in the bottom right corner to test real-time chat with light/dark toggling.</span>
+      </div>
+      <a href="/servers" class="nav-pill">
+        Manage Bot Servers
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div>BhashaBot Multilingual Desk</div>
+      <div>
+        <a href="/">Dashboard</a> · 
+        <a href="/servers">Bot Clients</a> · 
+        <a href="/moods">Mood Library</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Copy embed code
+    const copyBtn = document.getElementById("copy-btn");
+    const copyLabel = document.getElementById("copy-label");
+    copyBtn.addEventListener("click", () => {
+      const code = `<script src="${window.location.origin}/widget.js" data-title="BhashaBot"><\/script>`;
+      navigator.clipboard.writeText(code);
+      copyLabel.textContent = "Copied!";
+      setTimeout(() => {
+        copyLabel.textContent = "Copy Code";
+      }, 2000);
+    });
+
+    // Theme Switcher Logic
+    const htmlEl = document.documentElement;
+    const themeBtn = document.getElementById("theme-switch-btn");
+    const themeText = document.getElementById("theme-text");
+    const themeIcon = document.getElementById("theme-icon");
+
+    const ICONS = {
+      sun: `<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`,
+      moon: `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`
+    };
+
+    function applyTheme(theme) {
+      if (theme === "light") {
+        htmlEl.className = "theme-light";
+        themeText.textContent = "Nightfall";
+        themeIcon.innerHTML = ICONS.moon;
+      } else {
+        htmlEl.className = "theme-dark";
+        themeText.textContent = "Daylight";
+        themeIcon.innerHTML = ICONS.sun;
+      }
+      localStorage.setItem("bhashabot_demo_theme", theme);
+      if (typeof window.__BHASHABOT_SET_THEME__ === "function") {
+        window.__BHASHABOT_SET_THEME__(theme);
+      }
+    }
+
+    const savedTheme = localStorage.getItem("bhashabot_demo_theme") || "dark";
+    applyTheme(savedTheme);
+
+    themeBtn.addEventListener("click", () => {
+      const isDark = htmlEl.className.includes("theme-dark");
+      applyTheme(isDark ? "light" : "dark");
+    });
+  </script>
+
+  <!-- Load the widget (zero emojis, supports daylight & nightfall) -->
+  <script src="/widget.js" data-title="BhashaBot"></script>
+
+</body>
+</html>

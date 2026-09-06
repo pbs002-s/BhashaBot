@@ -5,3 +5,11 @@ out
 .env.local
 *.db
 local.db
+
+# Personal chat exports and anything trained from them stay on this machine.
+demo-messages/
+lib/persona/pritam-style.json
+.userbot-session
+.whatsapp-session/
+appstate.json
+.fb-appstate.json

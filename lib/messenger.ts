@@ -1,10 +1,12 @@
-// Sends replies back to the user via the Facebook Graph API.
+import { getSettings } from "./settings";
+
+/** Sends a reply back through the Meta Graph API when a Page is connected. */
 export async function sendMessengerReply(recipientId: string, text: string): Promise<boolean> {
-  const token = process.env.FB_PAGE_ACCESS_TOKEN;
-  if (!token) {
-    // skip silently in demo/local mode (no Facebook Page connected)
-    return false;
-  }
+  const { channels } = await getSettings();
+  const token = channels.fbPageAccessToken;
+
+  // No Page connected: the desk still logs and drafts, it just does not deliver.
+  if (!token) return false;
 
   try {
     const res = await fetch(`https://graph.facebook.com/v20.0/me/messages?access_token=${token}`, {
@@ -17,13 +19,12 @@ export async function sendMessengerReply(recipientId: string, text: string): Pro
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      console.error("Messenger send failed:", err);
+      console.error("Messenger send failed:", await res.text());
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Messenger send network exception:", err);
+    console.error("Messenger send request failed:", err);
     return false;
   }
 }
