@@ -1,0 +1,31 @@
+{
+  "generatedAt": "",
+  "source": "demo-messages",
+  "owner": "",
+  "corpus": {
+    "threads": 0,
+    "messages": 0,
+    "ownMessages": 0,
+    "ownMessagesUsed": 0,
+    "byRole": {}
+  },
+  "style": {
+    "avgWordsPerReply": 0,
+    "medianWordsPerReply": 0,
+    "emojiRatePct": 0,
+    "questionRatePct": 0,
+    "script": { "bengaliPct": 0, "banglishPct": 0, "mixedPct": 0 },
+    "topOpeners": [],
+    "topPhrases": []
+  },
+  "subMoods": {
+    "friendly": { "observed": 0, "learned": false, "samples": [] },
+    "flirty": { "observed": 0, "learned": false, "samples": [] },
+    "romantic": { "observed": 0, "learned": false, "samples": [] },
+    "angry": { "observed": 0, "learned": false, "samples": [] },
+    "sad": { "observed": 0, "learned": false, "samples": [] },
+    "caring": { "observed": 0, "learned": false, "samples": [] }
+  },
+  "relationships": {},
+  "threads": []
+}
