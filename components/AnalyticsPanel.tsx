@@ -1,214 +1,247 @@
 "use client";
+
 import React from "react";
 import { motion } from "framer-motion";
-import type { AnalyticsSummary } from "@/lib/types";
-import {
-  PieChart,
-  BarChart3,
-  Globe,
-  Smile,
-  ShieldCheck,
-  Zap,
-  Flame,
-  AlertTriangle,
-  HelpCircle,
-  Meh,
-} from "lucide-react";
+import { ChartBar, Gauge, Globe, Lightning, SmileyMeh, WarningDiamond } from "@phosphor-icons/react/dist/ssr";
+import type { AnalyticsSummary, Sentiment } from "@/lib/types";
+import { useT } from "./providers/AppProviders";
+import { EmptyState, Meter, SectionHead, cx } from "./ui/primitives";
 
-const SENTIMENT_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
-  happy: { bg: "bg-mint", text: "text-mint", icon: Smile },
-  neutral: { bg: "bg-fog", text: "text-fog", icon: Meh },
-  confused: { bg: "bg-signal", text: "text-signal", icon: HelpCircle },
-  urgent: { bg: "bg-signalLight", text: "text-signalLight", icon: Flame },
-  angry: { bg: "bg-coral", text: "text-coral", icon: AlertTriangle },
+const SENTIMENT_TONE: Record<Sentiment, "mint" | "fog" | "sky" | "signal" | "coral"> = {
+  happy: "mint",
+  neutral: "fog",
+  confused: "sky",
+  urgent: "signal",
+  angry: "coral",
 };
 
-export default function AnalyticsPanel({
-  analytics,
-}: {
-  analytics: AnalyticsSummary | null;
-}) {
+export default function AnalyticsPanel({ analytics }: { analytics: AnalyticsSummary | null }) {
+  const t = useT();
+
   if (!analytics || analytics.totalConversations === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-panel p-12 text-center">
-        <BarChart3 className="h-10 w-10 text-fog/50" />
-        <h3 className="mt-3 font-display text-base font-semibold text-paper">No Analytics Data Yet</h3>
-        <p className="mt-1 max-w-sm text-xs text-fog">
-          Start receiving Messenger messages or fire test events to generate real-time sentiment, language, and intent analytics.
-        </p>
+      <div className="rounded-shell border border-dashed border-line bg-panelCard/30 p-1.5">
+        <div className="rounded-core border border-line/50 bg-panel/60">
+          <EmptyState
+            icon={<ChartBar size={20} />}
+            title={t("insights.empty.title")}
+            body={t("insights.empty.body")}
+          />
+        </div>
       </div>
     );
   }
 
   const total = analytics.totalConversations;
-
-  // Sorted languages
-  const sortedLanguages = Object.entries(analytics.languageBreakdown || {}).sort(
-    ([, a], [, b]) => b - a
-  );
-
-  // Sorted intents
-  const sortedIntents = Object.entries(analytics.intentBreakdown || {}).sort(
-    ([, a], [, b]) => b - a
-  );
+  const languages = Object.entries(analytics.languageBreakdown || {}).sort(([, a], [, b]) => b - a);
+  const intents = Object.entries(analytics.intentBreakdown || {}).sort(([, a], [, b]) => b - a);
 
   return (
-    <div className="flex flex-1 flex-col gap-5">
-      {/* Top High-level KPIs */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-line bg-panel p-4">
-          <div className="flex items-center justify-between text-xs text-fog">
-            <span>AI Deflection Rate</span>
-            <ShieldCheck className="h-4 w-4 text-mint" />
-          </div>
-          <p className="mt-2 font-display text-2xl font-bold text-mint">
-            {analytics.resolutionRatePct}%
-          </p>
-          <p className="mt-1 text-[11px] text-fog">
-            {total - analytics.pendingHandoffs} of {total} resolved autonomously
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-line bg-panel p-4">
-          <div className="flex items-center justify-between text-xs text-fog">
-            <span>Pending Handoffs</span>
-            <AlertTriangle className="h-4 w-4 text-coral" />
-          </div>
-          <p className="mt-2 font-display text-2xl font-bold text-coral">
-            {analytics.pendingHandoffs}
-          </p>
-          <p className="mt-1 text-[11px] text-fog">
-            {analytics.resolvedHandoffs} handoffs resolved by support agents
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-line bg-panel p-4">
-          <div className="flex items-center justify-between text-xs text-fog">
-            <span>Average Latency</span>
-            <Zap className="h-4 w-4 text-violet" />
-          </div>
-          <p className="mt-2 font-display text-2xl font-bold text-violet">
-            {analytics.avgLatencyMs}ms
-          </p>
-          <p className="mt-1 text-[11px] text-fog">End-to-end inference & reply delivery</p>
-        </div>
+    <div className="flex flex-1 flex-col gap-4">
+      {/* --- headline trio, deliberately unequal --- */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <Kpi
+          className="md:col-span-5"
+          label={t("insights.deflection")}
+          value={`${analytics.resolutionRatePct}%`}
+          tone="text-mint"
+          sub={t("insights.deflection.sub", {
+            done: total - analytics.pendingHandoffs,
+            total,
+          })}
+          icon={<Gauge size={16} className="text-mint" />}
+          meter={analytics.resolutionRatePct}
+          meterTone="mint"
+        />
+        <Kpi
+          className="md:col-span-3"
+          label={t("insights.pending")}
+          value={String(analytics.pendingHandoffs)}
+          tone="text-coral"
+          sub={t("insights.pending.sub", { n: analytics.resolvedHandoffs })}
+          icon={<WarningDiamond size={16} className="text-coral" />}
+        />
+        <Kpi
+          className="md:col-span-4"
+          label={t("insights.latency")}
+          value={`${analytics.avgLatencyMs}ms`}
+          tone="text-violet"
+          sub={t("insights.latency.sub")}
+          icon={<Lightning size={16} className="text-violet" />}
+        />
       </div>
 
-      {/* Main Breakdown Grid */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {/* 1. Sentiment Emotional Breakdown */}
-        <div className="rounded-xl border border-line bg-panel p-5">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h3 className="font-display text-sm font-semibold text-paper flex items-center gap-2">
-              <Smile className="h-4 w-4 text-mint" />
-              Customer Sentiment Spectrum
-            </h3>
-            <span className="font-mono text-xs text-fog">{total} total</span>
+      {/* --- breakdowns --- */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <Card className="lg:col-span-5">
+          <SectionHead
+            title={t("insights.sentiment")}
+            icon={<SmileyMeh size={17} />}
+            actions={<span className="font-mono text-[0.7rem] text-fog">{total}</span>}
+          />
+          <div className="flex flex-col gap-4 p-6">
+            {(Object.entries(analytics.sentimentBreakdown) as Array<[Sentiment, number]>).map(
+              ([sentiment, count], index) => {
+                const pct = total ? Math.round((count / total) * 100) : 0;
+                return (
+                  <motion.div
+                    key={sentiment}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: index * 0.06 }}
+                    className="flex flex-col gap-2"
+                  >
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="font-medium text-paper">
+                        {t(`sentiment.${sentiment}` as any)}
+                      </span>
+                      <span className="font-mono text-[0.7rem] text-fog">
+                        {count} · {pct}%
+                      </span>
+                    </div>
+                    <Meter value={pct} tone={SENTIMENT_TONE[sentiment]} />
+                  </motion.div>
+                );
+              }
+            )}
           </div>
+        </Card>
 
-          <div className="mt-4 flex flex-col gap-3">
-            {Object.entries(analytics.sentimentBreakdown).map(([sentiment, count]) => {
+        <Card className="lg:col-span-7">
+          <SectionHead
+            title={t("insights.languages")}
+            icon={<Globe size={17} />}
+            actions={
+              <span className="font-mono text-[0.7rem] text-fog">
+                {t("insights.detected", { n: languages.length })}
+              </span>
+            }
+          />
+          <div className="flex flex-col gap-4 p-6">
+            {languages.map(([language, count], index) => {
               const pct = total ? Math.round((count / total) * 100) : 0;
-              const conf = SENTIMENT_COLORS[sentiment] || SENTIMENT_COLORS.neutral;
-              const Icon = conf.icon;
-
               return (
-                <div key={sentiment} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-medium capitalize text-paper">
-                      <Icon className={`h-3.5 w-3.5 ${conf.text}`} />
-                      {sentiment}
-                    </span>
-                    <span className="font-mono text-[11px] text-fog">
-                      {count} ({pct}%)
+                <motion.div
+                  key={language}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: index * 0.06 }}
+                  className="flex flex-col gap-2"
+                >
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="font-medium text-paper">{language}</span>
+                    <span className="font-mono text-[0.7rem] text-fog">
+                      {count} · {pct}%
                     </span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-panelCard">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className={`h-full rounded-full ${conf.bg}`}
-                    />
-                  </div>
-                </div>
+                  <Meter value={pct} tone="sky" />
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* 2. Multilingual Reach Breakdown */}
-        <div className="rounded-xl border border-line bg-panel p-5">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h3 className="font-display text-sm font-semibold text-paper flex items-center gap-2">
-              <Globe className="h-4 w-4 text-sky" />
-              Multilingual Language Reach
-            </h3>
-            <span className="font-mono text-xs text-fog">{sortedLanguages.length} detected</span>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3">
-            {sortedLanguages.map(([lang, count]) => {
+        <Card className="lg:col-span-12">
+          <SectionHead
+            title={t("insights.intents")}
+            icon={<ChartBar size={17} />}
+            actions={
+              <span className="font-mono text-[0.7rem] text-fog">
+                {t("insights.categories", { n: intents.length })}
+              </span>
+            }
+          />
+          <div className="grid grid-cols-1 gap-3 p-6 sm:grid-cols-2 xl:grid-cols-3">
+            {intents.map(([intent, count], index) => {
               const pct = total ? Math.round((count / total) * 100) : 0;
               return (
-                <div key={lang} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-paper">{lang}</span>
-                    <span className="font-mono text-[11px] text-fog">
-                      {count} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-panelCard">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className="h-full rounded-full bg-sky"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 3. Top Customer Intents */}
-        <div className="rounded-xl border border-line bg-panel p-5 md:col-span-2">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h3 className="font-display text-sm font-semibold text-paper flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-signal" />
-              Categorized Inquiry Intents
-            </h3>
-            <span className="font-mono text-xs text-fog">{sortedIntents.length} categories</span>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {sortedIntents.map(([intent, count]) => {
-              const pct = total ? Math.round((count / total) * 100) : 0;
-              return (
-                <div key={intent} className="rounded-lg border border-line bg-panelCard p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-semibold text-paper">
+                <motion.div
+                  key={intent}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.04, 0.3) }}
+                  className="rounded-card border border-line bg-panelCard p-4"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="truncate font-mono text-[0.72rem] font-medium text-paper">
                       {intent.replace(/_/g, " ")}
                     </span>
-                    <span className="font-mono text-[11px] text-signal font-medium">
-                      {count}
-                    </span>
+                    <span className="font-mono text-[0.7rem] text-signal">{count}</span>
                   </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-panel">
-                    <div
-                      style={{ width: `${pct}%` }}
-                      className="h-full rounded-full bg-signal transition-all duration-300"
-                    />
+                  <div className="mt-3">
+                    <Meter value={pct} />
                   </div>
-                  <span className="mt-1 block text-right font-mono text-[10px] text-fog">
-                    {pct}% of total inquiries
-                  </span>
-                </div>
+                  <p className="mt-2 text-right font-mono text-[0.65rem] text-fog">
+                    {t("insights.ofTotal", { n: pct })}
+                  </p>
+                </motion.div>
               );
             })}
           </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section
+      className={cx(
+        "rounded-shell border border-line/70 bg-panelCard/40 p-1.5 shadow-ambient",
+        className
+      )}
+    >
+      <div className="h-full rounded-core border border-line/60 bg-panel shadow-inset">{children}</div>
+    </section>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  sub,
+  icon,
+  tone,
+  meter,
+  meterTone,
+  className,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  icon: React.ReactNode;
+  tone: string;
+  meter?: number;
+  meterTone?: "mint" | "signal" | "coral" | "sky" | "violet";
+  className?: string;
+}) {
+  return (
+    <div
+      className={cx(
+        "rounded-shell border border-line/70 bg-panelCard/40 p-1.5 shadow-ambient",
+        className
+      )}
+    >
+      <div className="h-full rounded-core border border-line/60 bg-panel p-5 shadow-inset">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-xs font-medium text-fog">{label}</span>
+          {icon}
         </div>
+        <p
+          className={cx(
+            "mt-3 font-display text-[2rem] font-semibold leading-none tracking-[-0.03em] tabular",
+            tone
+          )}
+        >
+          {value}
+        </p>
+        <p className="mt-2 text-[0.7rem] leading-relaxed text-fog">{sub}</p>
+        {typeof meter === "number" ? (
+          <div className="mt-4">
+            <Meter value={meter} tone={meterTone} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
