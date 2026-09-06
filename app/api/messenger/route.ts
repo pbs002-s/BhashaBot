@@ -4,6 +4,7 @@ import { generateReply } from "@/lib/ai";
 import { insertLog } from "@/lib/db";
 import { alertHumanHandoff } from "@/lib/telegram";
 import { sendMessengerReply } from "@/lib/messenger";
+import { getSettings } from "@/lib/settings";
 
 // --- GET: Meta webhook verification handshake -----------------------------
 export async function GET(req: NextRequest) {
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.FB_VERIFY_TOKEN || "my-verify-token";
+  const { channels } = await getSettings();
+  const verifyToken = channels.fbVerifyToken || "my-verify-token";
   if (mode === "subscribe" && token === verifyToken) {
     return new NextResponse(challenge || "", { status: 200 });
   }
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
   // 1. Signature Verification (if FB_APP_SECRET is set)
-  const appSecret = process.env.FB_APP_SECRET;
+  const appSecret = (await getSettings()).channels.fbAppSecret;
   const signature = req.headers.get("x-hub-signature-256");
 
   if (appSecret && signature) {
@@ -56,7 +58,9 @@ export async function POST(req: NextRequest) {
   const senderId = messaging?.sender?.id || "unknown";
   const pageId = entry?.id || "unknown";
 
-  const ai = await generateReply(text);
+  // The sender id is what Messenger gives us; when it happens to be a name on
+  // the roster the persona mood answers in the right register.
+  const ai = await generateReply(text, { counterpartName: senderId });
   const latencyMs = Date.now() - startTs;
 
   await insertLog({
@@ -70,6 +74,8 @@ export async function POST(req: NextRequest) {
     intent: ai.intent,
     needsHuman: ai.needs_human,
     source: "webhook",
+    platform: "messenger",
+    mood: ai.mood_used || "",
     leadName: ai.lead.name,
     leadPhone: ai.lead.phone,
     leadEmail: ai.lead.email,
