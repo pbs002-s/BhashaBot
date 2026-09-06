@@ -25,6 +25,10 @@ export interface ConversationLog {
   agentReply?: string;
   agentRepliedAt?: string;
   source?: "webhook" | "simulator" | "seed";
+  /** Which channel it arrived on: messenger, instagram, whatsapp, telegram, discord, slack, web. */
+  platform?: string;
+  /** Which mood drafted the reply. */
+  mood?: string;
   leadName: string;
   leadPhone: string;
   leadEmail: string;
@@ -37,6 +41,8 @@ export interface ConversationLog {
 }
 
 export interface AiResult {
+  /** The mood that drafted this reply. */
+  mood_used?: string;
   detected_language: string;
   language_code: string;
   reply: string;
