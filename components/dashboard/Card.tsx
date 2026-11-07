@@ -16,7 +16,7 @@ export default function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cx("rounded-core border border-line/70 bg-panel p-5 shadow-ambient md:p-6", className)}>
+    <section className={cx("flex flex-col rounded-core border border-line/70 bg-panel p-5 shadow-ambient md:p-6", className)}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-[1.05rem] font-semibold tracking-[-0.02em] text-paper">{title}</h2>
