@@ -8,7 +8,7 @@ import { useLocale, useSettings, useTheme } from "./providers/AppProviders";
 import { cx } from "./ui/primitives";
 import type { TranslationKey } from "@/lib/i18n";
 import { MOODS, WORKSPACE_MODES } from "@/lib/settings-schema";
-import type { NavTab } from "./StatusHeader";
+import type { NavTab } from "./dashboard/Sidebar";
 
 interface Command {
   id: string;
