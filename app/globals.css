@@ -402,3 +402,25 @@ input[type="checkbox"] {
     --beam-angle: 360deg;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Flat cards. Surfaces were built as a shell wrapping a core (double border,
+   inner highlight). Collapse that to one thin-bordered card everywhere, so
+   the whole app reads as a single calm layer like the dashboard reference.
+   -------------------------------------------------------------------------- */
+.rounded-shell {
+  padding: 0 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 1.25rem;
+}
+.rounded-shell > .rounded-core {
+  border-radius: 1.25rem;
+  border-color: rgb(var(--c-line));
+  box-shadow: 0 1px 2px rgb(var(--c-shadow) / 0.04);
+  transition: border-color 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.rounded-shell:hover > .rounded-core {
+  border-color: rgb(var(--c-line-light));
+}
