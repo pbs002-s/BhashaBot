@@ -12,11 +12,23 @@ import KnowledgePanel from "@/components/KnowledgePanel";
 import LeadsPanel from "@/components/LeadsPanel";
 import ReplyStudio from "@/components/ReplyStudio";
 import SettingsPanel from "@/components/SettingsPanel";
-import SiteFooter from "@/components/SiteFooter";
-import StatsBar, { type Stats } from "@/components/StatsBar";
-import StatusHeader, { type NavTab } from "@/components/StatusHeader";
+import ChannelBubbles from "@/components/dashboard/ChannelBubbles";
+import KpiRow, { type Stats } from "@/components/dashboard/KpiRow";
+import LanguageRings from "@/components/dashboard/LanguageRings";
+import Sidebar, { MobileTabs, type NavTab } from "@/components/dashboard/Sidebar";
+import TopBar from "@/components/dashboard/TopBar";
+import TrafficChart from "@/components/dashboard/TrafficChart";
 import { useSettings, useT } from "@/components/providers/AppProviders";
 import type { AnalyticsSummary, ConversationLog } from "@/lib/types";
+import type { TranslationKey } from "@/lib/i18n";
+
+const TAB_TITLE = {
+  live: "nav.live",
+  analytics: "nav.analytics",
+  leads: "nav.leads",
+  knowledge: "nav.knowledge",
+  settings: "nav.settings",
+} as const satisfies Record<NavTab, TranslationKey>;
 
 export default function DeskPage() {
   const t = useT();
@@ -131,55 +143,65 @@ export default function DeskPage() {
         {t("app.skipToContent")}
       </a>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col">
-        <StatusHeader
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[100rem] gap-5 p-4">
+        <Sidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onOpenStudio={() => setStudioOpen(true)}
           onOpenPalette={() => setPaletteOpen(true)}
         />
 
-        <main
-          id="desk"
-          className={compact ? "flex flex-1 flex-col gap-4 pt-8" : "flex flex-1 flex-col gap-6 pt-10"}
-        >
-          {activeTab === "live" ? (
-            <StatsBar stats={stats} logs={logs} onFilterClick={handleStatFilter} />
-          ) : null}
+        <main id="desk" className={compact ? "flex min-w-0 flex-1 flex-col gap-4 py-2" : "flex min-w-0 flex-1 flex-col gap-5 py-3"}>
+          <TopBar title={t(TAB_TITLE[activeTab])} onOpenPalette={() => setPaletteOpen(true)} />
+          <MobileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto w-full max-w-[86rem] flex-1 px-5 pb-20 md:px-8"
+            className="flex flex-1 flex-col gap-5 pb-10"
           >
             {activeTab === "live" ? (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                <section className="flex flex-col gap-3 lg:col-span-8 xl:col-span-9">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-paper">
-                        {t("live.title")}
-                      </h2>
-                      <p className="mt-1 text-xs text-fog">{t("live.subtitle")}</p>
-                    </div>
-                    <DemoButton onSent={refresh} />
+              <>
+                {/* Reference layout: KPIs + traffic on the left, language rings and channels on the right. */}
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+                  <div className="flex flex-col gap-5 xl:col-span-8">
+                    <KpiRow stats={stats} logs={logs} onFilterClick={handleStatFilter} />
+                    <TrafficChart logs={logs} />
                   </div>
-
-                  <ConversationFeed
-                    logs={logs}
-                    loading={loading}
-                    activeFilter={feedFilter}
-                    onSelectLog={setSelected}
-                    emptyAction={<DemoButton onSent={refresh} />}
-                  />
-                </section>
-
-                <div className="lg:col-span-4 xl:col-span-3">
-                  <LeadsPanel logs={logs} onSelectLog={setSelected} />
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:col-span-4 xl:grid-cols-1">
+                    <LanguageRings analytics={analytics} />
+                    <ChannelBubbles logs={logs} />
+                  </div>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+                  <section className="flex flex-col gap-3 lg:col-span-8 xl:col-span-9">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-paper">
+                          {t("live.title")}
+                        </h2>
+                        <p className="mt-1 text-xs text-fog">{t("live.subtitle")}</p>
+                      </div>
+                      <DemoButton onSent={refresh} />
+                    </div>
+
+                    <ConversationFeed
+                      logs={logs}
+                      loading={loading}
+                      activeFilter={feedFilter}
+                      onSelectLog={setSelected}
+                      emptyAction={<DemoButton onSent={refresh} />}
+                    />
+                  </section>
+
+                  <div className="lg:col-span-4 xl:col-span-3">
+                    <LeadsPanel logs={logs} onSelectLog={setSelected} />
+                  </div>
+                </div>
+              </>
             ) : null}
 
             {activeTab === "analytics" ? <AnalyticsPanel analytics={analytics} /> : null}
@@ -193,8 +215,6 @@ export default function DeskPage() {
             {activeTab === "settings" ? <SettingsPanel /> : null}
           </motion.div>
         </main>
-
-        <SiteFooter />
       </div>
 
       <ReplyStudio
