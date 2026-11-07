@@ -89,9 +89,9 @@ export default function ServersManager() {
   // Auto scroll terminal to bottom
   const selectedServer = servers.find((s) => s.id === selectedServerId);
   useEffect(() => {
-    if (terminalBottomRef.current) {
-      terminalBottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    // Scroll the log box itself; scrollIntoView would also drag the whole page down.
+    const box = terminalBottomRef.current?.parentElement;
+    if (box) box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
   }, [selectedServer?.logs?.length]);
 
   async function handleAction(server: ServerId, action: "start" | "stop" | "restart" | "clear-logs") {
@@ -190,14 +190,14 @@ export default function ServersManager() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                href="/"
+                href="/desk"
                 className="inline-flex items-center gap-2 text-xs text-fog transition-colors hover:text-paper"
               >
                 <Logo size={22} />
                 <span>BhashaBot</span>
               </Link>
               <Link
-                href="/"
+                href="/desk"
                 className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panelCard px-3 py-1.5 text-xs text-fog transition-all duration-300 ease-physical hover:border-lineLight hover:text-paper"
               >
                 <ArrowLeft size={12} />
