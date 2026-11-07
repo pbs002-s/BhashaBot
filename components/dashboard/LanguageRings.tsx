@@ -10,7 +10,7 @@ import Card from "./Card";
 
 const RINGS = [
   { r: 80, stroke: "rgb(var(--c-signal))", dot: "bg-signal" },
-  { r: 64, stroke: "rgb(var(--c-coral))", dot: "bg-coral" },
+  { r: 64, stroke: "rgb(var(--c-violet))", dot: "bg-violet" },
   { r: 48, stroke: "rgb(var(--c-mint))", dot: "bg-mint" },
 ];
 // Each ring is a 3/4 arc, like the reference: the open quarter holds the total.
@@ -42,7 +42,7 @@ export default function LanguageRings({ analytics }: { analytics: AnalyticsSumma
   return (
     <Card title={t("insights.languages")} sub={t("dash.languages.sub")}>
       <div ref={root} className="relative mx-auto mt-4 h-48 w-48">
-        <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90" aria-hidden>
+        <svg viewBox="0 0 180 180" className="h-full w-full rotate-[135deg]" aria-hidden>
           {RINGS.map((ring, i) => {
             const c = 2 * Math.PI * ring.r;
             const share = (top[i]?.pct ?? 0) / 100;
@@ -64,9 +64,9 @@ export default function LanguageRings({ analytics }: { analytics: AnalyticsSumma
             );
           })}
         </svg>
-        <div className="absolute right-0 top-0 text-right">
-          <p className="font-display text-2xl font-semibold leading-none tracking-[-0.03em] text-paper tabular">{total}</p>
-          <p className="mt-1 text-[0.65rem] text-fog">{t("dash.languages.total")}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <p className="font-display text-3xl font-semibold leading-none tracking-[-0.03em] text-paper tabular">{total}</p>
+          <p className="mt-1 text-[0.65rem] leading-none text-fog">{t("dash.languages.total")}</p>
         </div>
       </div>
 
