@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
@@ -15,7 +16,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import ChannelBubbles from "@/components/dashboard/ChannelBubbles";
 import KpiRow, { type Stats } from "@/components/dashboard/KpiRow";
 import LanguageRings from "@/components/dashboard/LanguageRings";
-import Sidebar, { MobileTabs, type NavTab } from "@/components/dashboard/Sidebar";
+import { PALETTE_EVENT, STUDIO_EVENT, parseTab, tabHref, type NavTab } from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import TrafficChart from "@/components/dashboard/TrafficChart";
 import { useSettings, useT } from "@/components/providers/AppProviders";
@@ -31,6 +32,15 @@ const TAB_TITLE = {
 } as const satisfies Record<NavTab, TranslationKey>;
 
 export default function DeskPage() {
+  // useSearchParams needs a Suspense boundary for static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <Desk />
+    </Suspense>
+  );
+}
+
+function Desk() {
   const t = useT();
   const { settings } = useSettings();
 
@@ -46,7 +56,15 @@ export default function DeskPage() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<NavTab>("live");
+  // The tab lives in the URL, so the browser back button steps through tabs
+  // instead of leaving the desk.
+  const router = useRouter();
+  const params = useSearchParams();
+  const activeTab = parseTab(params.get("tab"));
+  const setActiveTab = useCallback(
+    (tab: NavTab) => router.push(tabHref(tab), { scroll: false }),
+    [router]
+  );
   const [feedFilter, setFeedFilter] = useState("all");
   const [studioOpen, setStudioOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -123,6 +141,23 @@ export default function DeskPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The sidebar lives in the shared layout, so it reaches the desk by event.
+  useEffect(() => {
+    const openStudio = () => setStudioOpen(true);
+    const openPalette = () => setPaletteOpen(true);
+    window.addEventListener(STUDIO_EVENT, openStudio);
+    window.addEventListener(PALETTE_EVENT, openPalette);
+    if (params.get("studio") === "1") {
+      setStudioOpen(true);
+      router.replace(tabHref(activeTab), { scroll: false });
+    }
+    return () => {
+      window.removeEventListener(STUDIO_EVENT, openStudio);
+      window.removeEventListener(PALETTE_EVENT, openPalette);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleStatFilter(filter: string) {
     setFeedFilter(filter === "resolution" ? "needsHuman" : filter === "leads" ? "hasLead" : "all");
     setActiveTab("live");
@@ -143,17 +178,9 @@ export default function DeskPage() {
         {t("app.skipToContent")}
       </a>
 
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[100rem] gap-5 p-4">
-        <Sidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onOpenStudio={() => setStudioOpen(true)}
-          onOpenPalette={() => setPaletteOpen(true)}
-        />
-
-        <main id="desk" className={compact ? "flex min-w-0 flex-1 flex-col gap-4 py-2" : "flex min-w-0 flex-1 flex-col gap-5 py-3"}>
+      <div className="relative z-10">
+        <main id="desk" className={compact ? "flex min-w-0 flex-col gap-4 py-2" : "flex min-w-0 flex-col gap-5 py-3"}>
           <TopBar title={t(TAB_TITLE[activeTab])} onOpenPalette={() => setPaletteOpen(true)} />
-          <MobileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
           <motion.div
             key={activeTab}
