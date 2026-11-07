@@ -41,6 +41,7 @@ export default function TrafficChart({ logs }: { logs: ConversationLog[] }) {
 
   return (
     <Card
+      className="flex-1"
       title={t("dash.traffic")}
       sub={t("dash.traffic.sub")}
       actions={
@@ -50,49 +51,51 @@ export default function TrafficChart({ logs }: { logs: ConversationLog[] }) {
         </div>
       }
     >
-      <div ref={root} className="relative mt-6 flex h-64 gap-3">
-        {/* y axis */}
-        <div className="flex flex-col-reverse justify-between pb-6 text-right font-mono text-[0.65rem] text-fogLight">
+      <div ref={root} className="mt-6 flex flex-1 flex-col pl-8">
+        {/* One plot box: gridlines, y labels, bars and tooltip all measure from it. */}
+        <div className="relative min-h-56 flex-1">
           {Array.from({ length: TICKS + 1 }, (_, i) => (
-            <span key={i}>{i * step}</span>
-          ))}
-        </div>
-
-        <div className="relative flex flex-1 items-end justify-between gap-2 pb-6">
-          {Array.from({ length: TICKS + 1 }, (_, i) => (
-            <span
-              key={i}
-              aria-hidden
-              className="absolute inset-x-0 border-t border-dashed border-line"
-              style={{ bottom: `calc(1.5rem + ${(i / TICKS) * 100}% - ${(i / TICKS) * 1.5}rem)` }}
-            />
+            <div key={i} aria-hidden className="absolute inset-x-0" style={{ bottom: `${(i / TICKS) * 100}%` }}>
+              <span className="absolute -left-8 w-6 -translate-y-1/2 text-right font-mono text-[0.65rem] leading-none text-fogLight">
+                {i * step}
+              </span>
+              <span className="block border-t border-dashed border-line" />
+            </div>
           ))}
 
-          {days.map((d, i) => (
-            <div
-              key={d.day}
-              className="relative flex h-full flex-1 flex-col items-center justify-end"
-              onMouseEnter={() => setHover(i)}
-              onMouseLeave={() => setHover(null)}
-              onFocus={() => setHover(i)}
-              onBlur={() => setHover(null)}
-              tabIndex={0}
-              aria-label={`${dayLabel(d.day)}: ${d.human} ${t("dash.traffic.human")}, ${d.auto} ${t("dash.traffic.auto")}`}
-            >
-              {hover === i ? (
-                <div className="pointer-events-none absolute z-10 -translate-y-2 whitespace-nowrap rounded-card bg-[#16140f] px-3 py-2 text-[0.7rem] text-white shadow-lifted" style={{ bottom: `${(Math.max(d.auto, d.human) / top) * 100}%` }}>
-                  <Row dot="bg-white/50" n={d.human} label={t("dash.traffic.human")} />
-                  <Row dot="bg-signal" n={d.auto} label={t("dash.traffic.auto")} />
-                </div>
-              ) : null}
-              <div className="flex h-full w-full items-end justify-center gap-1.5">
+          <div className="absolute inset-0 flex items-stretch justify-between gap-2">
+            {days.map((d, i) => (
+              <div
+                key={d.day}
+                className="relative flex flex-1 items-end justify-center gap-1.5"
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+                onFocus={() => setHover(i)}
+                onBlur={() => setHover(null)}
+                tabIndex={0}
+                aria-label={`${dayLabel(d.day)}: ${d.human} ${t("dash.traffic.human")}, ${d.auto} ${t("dash.traffic.auto")}`}
+              >
+                {hover === i ? (
+                  <div
+                    className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 -translate-y-2 whitespace-nowrap rounded-card bg-[#16140f] px-3 py-2 text-[0.7rem] text-white shadow-lifted"
+                    style={{ bottom: `${(Math.max(d.auto, d.human) / top) * 100}%` }}
+                  >
+                    <Row dot="bg-white/50" n={d.human} label={t("dash.traffic.human")} />
+                    <Row dot="bg-signal" n={d.auto} label={t("dash.traffic.auto")} />
+                  </div>
+                ) : null}
                 <Bar value={d.human} top={top} className="bg-lineLight" />
                 <Bar value={d.auto} top={top} className="bg-signal" />
               </div>
-              <span className="absolute -bottom-0 translate-y-full pt-1 text-[0.68rem] text-fog" suppressHydrationWarning>
-                {dayLabel(d.day)}
-              </span>
-            </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 flex justify-between gap-2">
+          {days.map((d) => (
+            <span key={d.day} className="flex-1 text-center text-[0.68rem] leading-none text-fog" suppressHydrationWarning>
+              {dayLabel(d.day)}
+            </span>
           ))}
         </div>
       </div>
@@ -103,7 +106,7 @@ export default function TrafficChart({ logs }: { logs: ConversationLog[] }) {
 function Bar({ value, top, className }: { value: number; top: number; className: string }) {
   return (
     <span
-      className={`traffic-bar block w-full max-w-[1.1rem] origin-bottom rounded-full ${className}`}
+      className={`traffic-bar block w-3 origin-bottom rounded-full ${className}`}
       style={{ height: `${Math.max(3, (value / top) * 100)}%` }}
     />
   );
