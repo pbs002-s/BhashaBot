@@ -95,7 +95,7 @@ export default function KpiRow({
   ];
 
   return (
-    <div ref={root} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div ref={root} className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card, i) => {
         const hero = i === 0;
         return (
@@ -104,7 +104,7 @@ export default function KpiRow({
             type="button"
             onClick={card.filter ? () => onFilterClick(card.filter!) : undefined}
             className={cx(
-              "kpi-card spotlight group relative overflow-hidden rounded-core p-5 text-left transition-[transform,box-shadow] duration-500 ease-physical hover:-translate-y-0.5",
+              "kpi-card spotlight group relative flex h-full flex-col overflow-hidden rounded-core p-5 text-left transition-shadow duration-500 ease-physical",
               hero
                 ? "beam-border bg-gradient-to-br from-signal to-signalSoft text-onSignal shadow-[0_18px_40px_-18px_rgb(var(--c-signal)/0.8)]"
                 : "border border-line/70 bg-panel shadow-ambient hover:shadow-lifted",
@@ -123,12 +123,12 @@ export default function KpiRow({
               </span>
               <DeltaBadge value={card.delta} invert={card.invert} onHero={hero} />
             </div>
-            <p className={cx("relative mt-5 text-xs font-medium", hero ? "text-onSignal/85" : "text-fog")}>{card.label}</p>
-            <div className="relative mt-1 flex items-end gap-3">
+            <p className={cx("relative mt-auto pt-5 text-xs font-medium", hero ? "text-onSignal/85" : "text-fog")}>{card.label}</p>
+            <div className="relative mt-1">
               <Ticker value={card.value} suffix={card.suffix} still={settings.ui.reduceMotion} />
-              <span className={cx("pb-1 text-[0.68rem] leading-snug", hero ? "text-onSignal/75" : "text-fog")}>
+              <p className={cx("mt-2 text-[0.68rem] leading-snug", hero ? "text-onSignal/75" : "text-fog")}>
                 {card.delta === null ? card.sub : t("dash.vsYesterday")}
-              </span>
+              </p>
             </div>
           </button>
         );
@@ -156,7 +156,7 @@ function Ticker({ value, suffix = "", still }: { value: number; suffix?: string;
   );
 
   return (
-    <span ref={ref} className="font-display text-[2rem] font-semibold leading-none tracking-[-0.03em] tabular">
+    <span ref={ref} className="block font-display text-[2rem] font-semibold leading-none tracking-[-0.03em] tabular">
       0{suffix}
     </span>
   );
