@@ -28,14 +28,14 @@ export default function MoodIndex() {
         <header className="mx-auto w-full max-w-[86rem] px-5 pt-10 md:px-8 lg:pt-14">
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/"
+              href="/desk"
               className="inline-flex items-center gap-2 text-xs text-fog transition-colors hover:text-paper"
             >
               <Logo size={22} />
               {t("app.name")}
             </Link>
             <Link
-              href="/"
+              href="/desk"
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panelCard px-3 py-1.5 text-xs text-fog transition-all duration-300 ease-physical hover:border-lineLight hover:text-paper"
             >
               <ArrowLeft size={12} />
