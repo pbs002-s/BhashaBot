@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
@@ -12,13 +13,34 @@ import KnowledgePanel from "@/components/KnowledgePanel";
 import LeadsPanel from "@/components/LeadsPanel";
 import ReplyStudio from "@/components/ReplyStudio";
 import SettingsPanel from "@/components/SettingsPanel";
-import SiteFooter from "@/components/SiteFooter";
-import StatsBar, { type Stats } from "@/components/StatsBar";
-import StatusHeader, { type NavTab } from "@/components/StatusHeader";
+import ChannelBubbles from "@/components/dashboard/ChannelBubbles";
+import KpiRow, { type Stats } from "@/components/dashboard/KpiRow";
+import LanguageRings from "@/components/dashboard/LanguageRings";
+import { PALETTE_EVENT, STUDIO_EVENT, parseTab, tabHref, type NavTab } from "@/components/dashboard/Sidebar";
+import TopBar from "@/components/dashboard/TopBar";
+import TrafficChart from "@/components/dashboard/TrafficChart";
 import { useSettings, useT } from "@/components/providers/AppProviders";
 import type { AnalyticsSummary, ConversationLog } from "@/lib/types";
+import type { TranslationKey } from "@/lib/i18n";
+
+const TAB_TITLE = {
+  live: "nav.live",
+  analytics: "nav.analytics",
+  leads: "nav.leads",
+  knowledge: "nav.knowledge",
+  settings: "nav.settings",
+} as const satisfies Record<NavTab, TranslationKey>;
 
 export default function DeskPage() {
+  // useSearchParams needs a Suspense boundary for static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <Desk />
+    </Suspense>
+  );
+}
+
+function Desk() {
   const t = useT();
   const { settings } = useSettings();
 
@@ -34,7 +56,15 @@ export default function DeskPage() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<NavTab>("live");
+  // The tab lives in the URL, so the browser back button steps through tabs
+  // instead of leaving the desk.
+  const router = useRouter();
+  const params = useSearchParams();
+  const activeTab = parseTab(params.get("tab"));
+  const setActiveTab = useCallback(
+    (tab: NavTab) => router.push(tabHref(tab), { scroll: false }),
+    [router]
+  );
   const [feedFilter, setFeedFilter] = useState("all");
   const [studioOpen, setStudioOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -111,6 +141,23 @@ export default function DeskPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The sidebar lives in the shared layout, so it reaches the desk by event.
+  useEffect(() => {
+    const openStudio = () => setStudioOpen(true);
+    const openPalette = () => setPaletteOpen(true);
+    window.addEventListener(STUDIO_EVENT, openStudio);
+    window.addEventListener(PALETTE_EVENT, openPalette);
+    if (params.get("studio") === "1") {
+      setStudioOpen(true);
+      router.replace(tabHref(activeTab), { scroll: false });
+    }
+    return () => {
+      window.removeEventListener(STUDIO_EVENT, openStudio);
+      window.removeEventListener(PALETTE_EVENT, openPalette);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleStatFilter(filter: string) {
     setFeedFilter(filter === "resolution" ? "needsHuman" : filter === "leads" ? "hasLead" : "all");
     setActiveTab("live");
@@ -131,55 +178,57 @@ export default function DeskPage() {
         {t("app.skipToContent")}
       </a>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col">
-        <StatusHeader
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onOpenStudio={() => setStudioOpen(true)}
-          onOpenPalette={() => setPaletteOpen(true)}
-        />
-
-        <main
-          id="desk"
-          className={compact ? "flex flex-1 flex-col gap-4 pt-8" : "flex flex-1 flex-col gap-6 pt-10"}
-        >
-          {activeTab === "live" ? (
-            <StatsBar stats={stats} logs={logs} onFilterClick={handleStatFilter} />
-          ) : null}
+      <div className="relative z-10">
+        <main id="desk" className={compact ? "flex min-w-0 flex-col gap-4 py-2" : "flex min-w-0 flex-col gap-5 py-3"}>
+          <TopBar title={t(TAB_TITLE[activeTab])} onOpenPalette={() => setPaletteOpen(true)} />
 
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto w-full max-w-[86rem] flex-1 px-5 pb-20 md:px-8"
+            className="flex flex-1 flex-col gap-5 pb-10"
           >
             {activeTab === "live" ? (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                <section className="flex flex-col gap-3 lg:col-span-8 xl:col-span-9">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-paper">
-                        {t("live.title")}
-                      </h2>
-                      <p className="mt-1 text-xs text-fog">{t("live.subtitle")}</p>
-                    </div>
-                    <DemoButton onSent={refresh} />
+              <>
+                {/* Reference layout: KPIs + traffic on the left, language rings and channels on the right. */}
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+                  <div className="flex flex-col gap-5 xl:col-span-8">
+                    <KpiRow stats={stats} logs={logs} onFilterClick={handleStatFilter} />
+                    <TrafficChart logs={logs} />
                   </div>
-
-                  <ConversationFeed
-                    logs={logs}
-                    loading={loading}
-                    activeFilter={feedFilter}
-                    onSelectLog={setSelected}
-                    emptyAction={<DemoButton onSent={refresh} />}
-                  />
-                </section>
-
-                <div className="lg:col-span-4 xl:col-span-3">
-                  <LeadsPanel logs={logs} onSelectLog={setSelected} />
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:col-span-4 xl:grid-cols-1">
+                    <LanguageRings analytics={analytics} />
+                    <ChannelBubbles logs={logs} />
+                  </div>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+                  <section className="flex flex-col gap-3 lg:col-span-8 xl:col-span-9">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-paper">
+                          {t("live.title")}
+                        </h2>
+                        <p className="mt-1 text-xs text-fog">{t("live.subtitle")}</p>
+                      </div>
+                      <DemoButton onSent={refresh} />
+                    </div>
+
+                    <ConversationFeed
+                      logs={logs}
+                      loading={loading}
+                      activeFilter={feedFilter}
+                      onSelectLog={setSelected}
+                      emptyAction={<DemoButton onSent={refresh} />}
+                    />
+                  </section>
+
+                  <div className="lg:col-span-4 xl:col-span-3">
+                    <LeadsPanel logs={logs} onSelectLog={setSelected} />
+                  </div>
+                </div>
+              </>
             ) : null}
 
             {activeTab === "analytics" ? <AnalyticsPanel analytics={analytics} /> : null}
@@ -193,8 +242,6 @@ export default function DeskPage() {
             {activeTab === "settings" ? <SettingsPanel /> : null}
           </motion.div>
         </main>
-
-        <SiteFooter />
       </div>
 
       <ReplyStudio

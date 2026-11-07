@@ -85,7 +85,7 @@ export default function ConversationFeed({
       {/* --- filter rail --- */}
       <div className="flex flex-wrap items-end gap-3 rounded-shell border border-line/70 bg-panelCard/40 p-1.5 shadow-ambient">
         <div className="flex w-full flex-wrap items-end gap-3 rounded-core border border-line/60 bg-panel p-3.5 shadow-inset">
-          <div className="relative min-w-[15rem] flex-1">
+          <div className="relative min-w-[16rem] flex-1">
             <MagnifyingGlass size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fog" />
             <input
               type="search"
@@ -100,7 +100,7 @@ export default function ConversationFeed({
             label=""
             value={sentiment}
             onChange={setSentiment}
-            className="w-40"
+            className="w-36"
             options={[
               { value: "all", label: t("live.filter.sentiment") },
               { value: "happy", label: t("sentiment.happy") },
@@ -115,7 +115,7 @@ export default function ConversationFeed({
             label=""
             value={route}
             onChange={setRoute}
-            className="w-48"
+            className="w-44"
             options={[
               { value: "all", label: t("live.filter.route") },
               { value: "needsHuman", label: t("live.route.pending") },
@@ -130,7 +130,7 @@ export default function ConversationFeed({
               label=""
               value={language}
               onChange={setLanguage}
-              className="w-44"
+              className="w-40"
               options={[
                 { value: "all", label: t("live.filter.language") },
                 ...languages.map((l) => ({ value: l, label: l })),

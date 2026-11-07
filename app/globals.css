@@ -370,3 +370,57 @@ input[type="checkbox"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Border beam: a light that travels round the edge of a card.
+   Adapted from Magic UI's BorderBeam (MIT, magicui.design), CSS-only here.
+   -------------------------------------------------------------------------- */
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.beam-border {
+  position: relative;
+  isolation: isolate;
+}
+.beam-border::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--beam-angle), transparent 0 80%, rgb(255 255 255 / 0.9) 90%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: beam-spin 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Flat cards. Surfaces were built as a shell wrapping a core (double border,
+   inner highlight). Collapse that to one thin-bordered card everywhere, so
+   the whole app reads as a single calm layer like the dashboard reference.
+   -------------------------------------------------------------------------- */
+.rounded-shell {
+  padding: 0 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 1.25rem;
+}
+.rounded-shell > .rounded-core {
+  border-radius: 1.25rem;
+  border-color: rgb(var(--c-line));
+  box-shadow: 0 1px 2px rgb(var(--c-shadow) / 0.04);
+  transition: border-color 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.rounded-shell:hover > .rounded-core {
+  border-color: rgb(var(--c-line-light));
+}

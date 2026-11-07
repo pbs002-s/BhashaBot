@@ -131,7 +131,7 @@ export default function MoodDetail({ moodId }: { moodId: ReplyMood }) {
                 {t("moods.back.moods")}
               </Link>
               <Link
-                href="/"
+                href="/desk"
                 className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panelCard px-3 py-1.5 text-xs text-fog transition-all duration-300 ease-physical hover:border-lineLight hover:text-paper"
               >
                 <House size={12} weight="fill" />
