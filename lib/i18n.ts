@@ -420,6 +420,21 @@ const en = {
   "footer.credit": "Built by {name}",
   "engine.offline": "Rule engine",
   "engine.live": "{provider} · {model}",
+  "dash.menu": "Menu",
+  "dash.workspace": "Workspace",
+  "dash.tools": "Tools",
+  "dash.vsYesterday": "vs yesterday",
+  "dash.traffic": "Reply traffic",
+  "dash.traffic.sub": "Conversations per day, last 7 days",
+  "dash.traffic.auto": "Answered by AI",
+  "dash.traffic.human": "Needed a person",
+  "dash.languages.sub": "Top languages people wrote in",
+  "dash.languages.total": "Messages",
+  "dash.channels": "Channel mix",
+  "dash.channels.sub": "Where conversations arrive",
+  "dash.studio.title": "Reply studio",
+  "dash.studio.body": "Draft a reply in any mood and language before it goes out.",
+  "dash.empty": "No data yet",
 };
 
 export type TranslationKey = keyof typeof en;
@@ -825,6 +840,21 @@ const bn: Record<TranslationKey, string> = {
   "footer.credit": "তৈরি করেছেন {name}",
   "engine.offline": "রুল ইঞ্জিন",
   "engine.live": "{provider} · {model}",
+  "dash.menu": "মেনু",
+  "dash.workspace": "ওয়ার্কস্পেস",
+  "dash.tools": "টুলস",
+  "dash.vsYesterday": "গতকালের তুলনায়",
+  "dash.traffic": "রিপ্লাই ট্রাফিক",
+  "dash.traffic.sub": "গত ৭ দিনে প্রতিদিনের কথোপকথন",
+  "dash.traffic.auto": "এআই উত্তর দিয়েছে",
+  "dash.traffic.human": "মানুষ লেগেছে",
+  "dash.languages.sub": "যেসব ভাষায় সবচেয়ে বেশি লিখেছে",
+  "dash.languages.total": "বার্তা",
+  "dash.channels": "চ্যানেল মিশ্রণ",
+  "dash.channels.sub": "কথোপকথন কোথা থেকে আসে",
+  "dash.studio.title": "রিপ্লাই স্টুডিও",
+  "dash.studio.body": "পাঠানোর আগে যেকোনো মেজাজ ও ভাষায় উত্তর লিখে দেখুন।",
+  "dash.empty": "এখনও কোনো তথ্য নেই",
 };
 
 export const dictionaries: Record<UiLocale, Record<TranslationKey, string>> = { en, bn };
